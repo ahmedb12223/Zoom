@@ -1,0 +1,475 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Video,
+  CheckCircle2,
+  Search,
+  ExternalLink,
+  ShieldCheck,
+  Sparkles,
+  ArrowRight,
+  GraduationCap,
+  Copy,
+  Check,
+  Lock
+} from 'lucide-react';
+import { AttendanceRecord, ClassSession, Student, TeacherProfile } from '../types';
+import { filterSuggestions, findBestMatch, normalizeText, matchesStudentSearch } from '../utils/arabicFuzzy';
+import { getTrackLabel } from '../utils/whatsappFormatter';
+import { ensureAbsoluteUrl } from '../utils/urlHelper';
+import { recordAttendanceViaServer } from '../utils/apiSync';
+import { TeacherAuthModal } from './TeacherAuthModal';
+
+interface StudentGatewayProps {
+  session: ClassSession;
+  allStudents: Student[];
+  teacher: TeacherProfile;
+  onRecordAttendance: (
+    sessionId: string,
+    studentName: string,
+    matchedStudent?: Student,
+    confidenceScore?: number,
+    serverRecord?: AttendanceRecord
+  ) => void;
+  onBackToDashboard?: () => void;
+}
+
+export const StudentGateway: React.FC<StudentGatewayProps> = ({
+  session,
+  allStudents,
+  teacher,
+  onRecordAttendance,
+  onBackToDashboard,
+}) => {
+  const [nameInput, setNameInput] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alreadyRegisteredMessage, setAlreadyRegisteredMessage] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(2);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [showTeacherAuthModal, setShowTeacherAuthModal] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const redirectTriggeredRef = useRef(false);
+
+  // Guarantee valid absolute Zoom URL (e.g. https://...)
+  const cleanZoomUrl = ensureAbsoluteUrl(session.zoomUrl || 'https://zoom.us/join');
+
+  // Fallback to fetch full student roster from server if opened on new device/tab
+  const [activeStudents, setActiveStudents] = useState<Student[]>(allStudents);
+
+  useEffect(() => {
+    const hasClassStudents = allStudents.some((s) => s.classId === session.classId);
+    if (!hasClassStudents) {
+      fetch('/api/data')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && Array.isArray(data.students) && data.students.length > 0) {
+            setActiveStudents(data.students);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setActiveStudents(allStudents);
+    }
+  }, [allStudents, session.classId]);
+
+  // Relevant students for this session (filtered by class and track)
+  const sessionStudents = activeStudents.filter((s) => {
+    if (s.classId !== session.classId) return false;
+    if (session.targetTrack === 'all') return true;
+    return s.track === session.targetTrack;
+  });
+
+  // Sorted alphabetically in Arabic
+  const sortedClassStudents = [...sessionStudents].sort((a, b) =>
+    a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' })
+  );
+
+  // Selected student state (Strict Roster Selection requirement)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  // Filtered alphabetical list based on robust multi-token and compound Arabic search
+  const filteredRoster = sortedClassStudents.filter((st) => {
+    return matchesStudentSearch(nameInput, st.name, st.studentCode);
+  });
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Safe helper to open Zoom URL in a new window/tab
+  const triggerZoomRedirect = useCallback(() => {
+    try {
+      // 1. Try standard window.open in new tab
+      const win = window.open(cleanZoomUrl, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        // 2. Fallback: virtual anchor click
+        const link = document.createElement('a');
+        link.href = cleanZoomUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.warn('Could not automatically open new tab:', err);
+    }
+  }, [cleanZoomUrl]);
+
+  // Countdown timer for automatic Zoom redirection in a new tab
+  useEffect(() => {
+    if (!isSubmitted) return;
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          if (!redirectTriggeredRef.current) {
+            redirectTriggeredRef.current = true;
+            triggerZoomRedirect();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSubmitted, triggerZoomRedirect]);
+
+  // Handle student submission (Strictly requires selectedStudent from roster)
+  const handleSubmitName = async (studentToSubmit?: Student) => {
+    const targetStudent = studentToSubmit || selectedStudent;
+    if (!targetStudent || isSubmitting) return;
+
+    setIsSubmitting(true);
+    const entered = targetStudent.name.trim();
+
+    // 1. Record attendance to server API & BroadcastChannel for real-time live sync
+    let serverRecordResult: AttendanceRecord | undefined;
+    try {
+      const result = await recordAttendanceViaServer(session.id, entered, targetStudent, 1.0, {
+        className: session.className,
+        sessionTitle: session.sessionTitle,
+        zoomUrl: session.zoomUrl,
+        targetTrack: session.targetTrack,
+        teacherId: session.teacherId,
+      });
+
+      if (result) {
+        serverRecordResult = result.record;
+        if (result.isReentry) {
+          setAlreadyRegisteredMessage(
+            `أهلاً بعودتك يا ${targetStudent.name}! تم تحديث وقت دخولك (${result.record?.joinCount || 2}×). جاري نقلك إلى زووم...`
+          );
+        } else {
+          setAlreadyRegisteredMessage(null);
+        }
+      }
+    } catch (err) {
+      console.warn('Server record attendance error:', err);
+    }
+
+    // 2. Update local state authoritative record
+    onRecordAttendance(session.id, entered, targetStudent, 1.0, serverRecordResult);
+    setIsSubmitted(true);
+    setIsSubmitting(false);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(cleanZoomUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  return (
+    <div className="min-h-screen bg-linear-to-b from-indigo-50/70 via-slate-50 to-white flex flex-col justify-between p-4 sm:p-6 dir-rtl font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      {/* Top Bar / Teacher Return switch for preview testing */}
+      <div className="max-w-md w-full mx-auto flex items-center justify-between text-xs text-slate-500 py-2">
+        <div className="flex items-center gap-1.5 font-bold text-slate-700">
+          <GraduationCap className="w-4 h-4 text-indigo-600" />
+          <span>{teacher.schoolName}</span>
+        </div>
+        {onBackToDashboard && (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowTeacherAuthModal(true)}
+              className="text-[11px] text-slate-400 hover:text-slate-600 font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              title="دخول المعلم المشرف (محمي برمز مرور)"
+            >
+              <Lock className="w-3 h-3 text-slate-400" />
+              <span>المشرف</span>
+            </button>
+
+            <TeacherAuthModal
+              isOpen={showTeacherAuthModal}
+              onClose={() => setShowTeacherAuthModal(false)}
+              onSuccess={() => {
+                setShowTeacherAuthModal(false);
+                onBackToDashboard();
+              }}
+              title="التحقق من هوية المعلم المشرف"
+              description="هذه المنطقة مخصصة للمعلمين فقط. يرجى إدخال رمز المرور السري للدخول إلى لوحة التحكم."
+            />
+          </>
+        )}
+      </div>
+
+      {/* Main Card */}
+      <div className="max-w-md w-full mx-auto my-auto bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 sm:p-8 transition-all">
+        {!isSubmitted ? (
+          <div className="space-y-6 text-center">
+            {/* Header Icon & Session Details */}
+            <div>
+              <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-600/25">
+                <Video className="w-8 h-8" />
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold mb-2 border border-indigo-100">
+                <span>فصل {session.className}</span>
+                {session.targetTrack !== 'all' && (
+                  <>
+                    <span>·</span>
+                    <span>{getTrackLabel(session.targetTrack)}</span>
+                  </>
+                )}
+              </div>
+
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug">
+                {session.sessionTitle}
+              </h1>
+
+              <p className="text-xs text-slate-500 mt-1.5">
+                حصة <span className="font-bold text-slate-700">{teacher.subject}</span> مع المعلم{' '}
+                <span className="font-bold text-slate-700">{teacher.name}</span>
+              </p>
+            </div>
+
+            {/* Strict Selection Prompt */}
+            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/70 text-right space-y-3">
+              <label className="block text-xs font-bold text-slate-800">
+                ابحث واختر اسمك من كشف فصل {session.className}:
+              </label>
+
+              {/* Search Box & Alphabetical Selection Dropdown */}
+              <div ref={dropdownRef} className="relative">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => {
+                      setNameInput(e.target.value);
+                      setSelectedStudent(null);
+                      setIsDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsDropdownOpen(true)}
+                    placeholder="ابدأ بكتابة اسمك للبحث في القائمة..."
+                    className="w-full pr-10 pl-4 py-3 text-sm font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-all text-slate-900 placeholder:text-slate-400"
+                  />
+                </div>
+
+                {/* Selected Student Highlight Banner */}
+                {selectedStudent && (
+                  <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs animate-in fade-in">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-emerald-950">{selectedStudent.name}</div>
+                        <div className="text-[10px] text-emerald-700">تم اختيار الاسم المسجل في الكشف بنجاح</div>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-md font-extrabold ${
+                        selectedStudent.track === 'english'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}
+                    >
+                      {selectedStudent.track === 'english' ? 'مسار لغات' : 'مسار عربي'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Dropdown Suggestions (Sorted Alphabetically) */}
+                {isDropdownOpen && (
+                  <div className="absolute z-20 left-0 right-0 mt-1.5 bg-white rounded-2xl shadow-2xl border border-slate-200/90 max-h-60 overflow-y-auto divide-y divide-slate-100 text-right animate-in fade-in zoom-in-95">
+                    <div className="p-2.5 bg-slate-50/90 text-[11px] font-bold text-slate-500 flex items-center justify-between sticky top-0 backdrop-blur-xs border-b border-slate-100">
+                      <span>كشف طلاب فصل {session.className} (مرتب أبجديًا):</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-extrabold">
+                        {filteredRoster.length} طالب
+                      </span>
+                    </div>
+
+                    {filteredRoster.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                        لم يتم العثور على اسم ينتهي أو يبدأ بـ "{nameInput}". تأكد من كتابة الاسم الصحيح.
+                      </div>
+                    ) : (
+                      filteredRoster.map((student) => {
+                        const isSelected = selectedStudent?.id === student.id;
+                        return (
+                          <div
+                            key={student.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setNameInput(student.name);
+                              setIsDropdownOpen(false);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                setSelectedStudent(student);
+                                setNameInput(student.name);
+                                setIsDropdownOpen(false);
+                              }
+                            }}
+                            className={`p-3 cursor-pointer flex items-center justify-between text-xs transition-colors ${
+                              isSelected
+                                ? 'bg-emerald-50 text-emerald-950 font-bold'
+                                : 'hover:bg-indigo-50/80 text-slate-900'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {isSelected ? (
+                                <div className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                </div>
+                              ) : (
+                                <div className="w-2 h-2 rounded-full bg-slate-300 shrink-0" />
+                              )}
+                              <span className="font-bold">{student.name}</span>
+                            </div>
+
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
+                                student.track === 'english'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {student.track === 'english' ? 'لغات' : 'عربي'}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {!selectedStudent && (
+                <p className="text-[11px] text-indigo-700 bg-indigo-50/60 p-2 rounded-xl border border-indigo-100 text-right font-semibold">
+                  ⚠️ يرجى البحث واختيار اسمك المسجل رسمياً من قائمة الكشف أعلاه لتسجيل حضورك.
+                </p>
+              )}
+            </div>
+
+            {/* Submit Action (Only enabled when a valid roster student is selected) */}
+            <button
+              type="button"
+              onClick={() => handleSubmitName()}
+              disabled={!selectedStudent || isSubmitting}
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              <span>{isSubmitting ? 'جاري تسجيل حضورك...' : 'تسجيل الحضور والدخول لزوم'}</span>
+            </button>
+          </div>
+        ) : (
+          /* Success & Redirect Screen (Opens Zoom reliably in a new tab) */
+          <div className="text-center py-4 space-y-6 animate-in zoom-in-95">
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner shadow-emerald-600/10">
+              <CheckCircle2 className="w-12 h-12" />
+            </div>
+
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold mb-2 border border-emerald-200">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>تم تسجيل الحضور بنجاح</span>
+              </div>
+              <h2 className="text-2xl font-extrabold text-slate-900">
+                أهلاً بك، {nameInput}! 🚀
+              </h2>
+              {alreadyRegisteredMessage && (
+                <p className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mt-2 font-medium">
+                  {alreadyRegisteredMessage}
+                </p>
+              )}
+            </div>
+
+            {/* Automatic Redirect Counter Card */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+              <p className="text-xs text-slate-600 font-medium mb-1">
+                جاري فتح غرفة زوم في نافذة جديدة خلال
+              </p>
+              <div className="text-3xl font-black font-mono text-indigo-600 my-1 tabular-nums">
+                {countdown} {countdown === 1 ? 'ثانية' : 'ثوانٍ'}
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                إذا لم تفتح نافذة زوم تلقائياً، اضغط على الزر الأخضر بالأسفل
+              </p>
+            </div>
+
+            {/* Direct Open CTA Button (Opens Zoom in new tab with full browser reliability) */}
+            <div className="space-y-2.5">
+              <a
+                href={cleanZoomUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  redirectTriggeredRef.current = true;
+                }}
+                className="w-full py-4 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-extrabold text-base shadow-xl shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <span>الانتقال إلى زوم الآن (فتح في نافذة جديدة)</span>
+                <ExternalLink className="w-5 h-5 group-hover:translate-x-[-2px] transition-transform" />
+              </a>
+
+              {/* Copy Direct Link button if student needs to paste into Zoom client */}
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="w-full py-2 px-3 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-700">تم نسخ رابط زوم المباشر للحافظة!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                    <span>نسخ رابط غرفة زوم مباشرة</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>تم توثيق وقت الحضور بدقة في سجل الأستاذ {teacher.name}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="text-center text-[11px] text-slate-400 py-3 font-medium">
+        بوابة تحضير زوم الذكية · منصة الفصول الدراسية للغات
+      </div>
+    </div>
+  );
+};

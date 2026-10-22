@@ -1,0 +1,1185 @@
+{
+  "teachers": [
+    {
+      "id": "teacher_ahmed_badawi",
+      "name": "مستر احمد بدوي",
+      "subject": "الرياضيات (Math)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "ahmedbadawi5090@gmail.com",
+      "defaultZoomLink": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b",
+        "class_gr5_a"
+      ]
+    },
+    {
+      "id": "teacher_mahmoud_morsi",
+      "name": "مستر محمود مرسي",
+      "subject": "العلوم (Science)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "mahmoud.morsi@school.edu",
+      "defaultZoomLink": "https://zoom.us/j/9876543210?pwd=scienceRoom2026",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_hussein_bisher",
+      "name": "مستر حسين بشر",
+      "subject": "العلوم (Science)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "hussein.bisher@school.edu",
+      "defaultZoomLink": "https://zoom.us/j/9876543211?pwd=scienceRoom2026",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_mohamed_matar",
+      "name": "مستر محمد مطر",
+      "subject": "التربية الإسلامية، القرآن الكريم، الفقه (Islamic / Quran / FG)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "mohamed.matar@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_walid_abouzeid",
+      "name": "مسيو وليد ابو زيد",
+      "subject": "التربية الإسلامية، القرآن الكريم، الفقه (Islamic / Quran / FG)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "walid.abouzeid@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_raafat",
+      "name": "مستر رأفت",
+      "subject": "الرياضيات (Math)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "raafat.math@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_omar",
+      "name": "مستر عمر",
+      "subject": "اللغة الإنجليزية (English)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "omar.english@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_mohamed_hesham",
+      "name": "مستر محمد هشام",
+      "subject": "اللغة الإنجليزية (English)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "mohamed.hesham@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_amr_mostafa",
+      "name": "مستر عمرو مصطفي",
+      "subject": "اللغة العربية (Arabic)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "amr.mostafa@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_abdelrazek",
+      "name": "مستر عبد الرزاق",
+      "subject": "الحاسب الآلي وتكنولوجيا المعلومات (ICT)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "abdelrazek.ict@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_mahmoud_ebada",
+      "name": "مستر محمود عباده",
+      "subject": "الدراسات الاجتماعية (Social Studies)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "mahmoud.ebada@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    },
+    {
+      "id": "teacher_abdelhamid",
+      "name": "مستر عبد الحميد",
+      "subject": "اللغة العربية (Arabic)",
+      "schoolName": "مدرسة اللغات الحديثة",
+      "email": "abdelhamid.arabic@school.edu",
+      "defaultZoomLink": "",
+      "assignedClassIds": [
+        "class_gr4_a",
+        "class_gr4_b"
+      ]
+    }
+  ],
+  "currentTeacherId": "teacher_ahmed_badawi",
+  "classes": [
+    {
+      "id": "class_gr4___a",
+      "name": "GR4 A",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.548Z"
+    },
+    {
+      "id": "class_gr4___b",
+      "name": "GR4 B",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.549Z"
+    },
+    {
+      "id": "class_gr5___a",
+      "name": "GR5 A",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.549Z"
+    },
+    {
+      "id": "class_gr6___a",
+      "name": "GR6 A",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.549Z"
+    },
+    {
+      "id": "class_gr7___a",
+      "name": "GR7 A",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.549Z"
+    },
+    {
+      "id": "class_gr7___b",
+      "name": "GR7 B",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.549Z"
+    },
+    {
+      "id": "class_gr8___a",
+      "name": "GR8 A",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.549Z"
+    },
+    {
+      "id": "class_gr9___a",
+      "name": "GR9 A",
+      "gradeLevel": "المرحلة الدراسية",
+      "zoomUrl": "https://zoom.us/j/1112223333?pwd=mathRoom2026",
+      "createdAt": "2026-10-21T15:22:40.549Z"
+    }
+  ],
+  "students": [
+    {
+      "id": "st_1792596160549_0",
+      "name": "احمد عبدالله حليمه",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-001"
+    },
+    {
+      "id": "st_1792596160549_1",
+      "name": "احمد حسام الدين عبد المعز عبد",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-002"
+    },
+    {
+      "id": "st_1792596160549_2",
+      "name": "اياد احمد محمد علم الدين",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-003"
+    },
+    {
+      "id": "st_1792596160549_3",
+      "name": "اياد على كامل عبد الله",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-004"
+    },
+    {
+      "id": "st_1792596160549_4",
+      "name": "بلال محمد عبد الوهاب هجرس",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-005"
+    },
+    {
+      "id": "st_1792596160550_5",
+      "name": "سليم يوسف عبد الحميد طنطاوى",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-006"
+    },
+    {
+      "id": "st_1792596160550_6",
+      "name": "عبد الرحمن عمرو محمد عيسى",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-007"
+    },
+    {
+      "id": "st_1792596160550_7",
+      "name": "عبد الرحمن محمد فتحى عبد الحليم",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-008"
+    },
+    {
+      "id": "st_1792596160550_8",
+      "name": "عمر عامر مجدى الشربيني",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-009"
+    },
+    {
+      "id": "st_1792596160550_9",
+      "name": "مالك مروان عبد الفتاح عبد الكريم",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-010"
+    },
+    {
+      "id": "st_1792596160550_10",
+      "name": "ياسين صلاح الدين محمد محمد",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-011"
+    },
+    {
+      "id": "st_1792596160550_11",
+      "name": "ياسين احمد عبد العزيز جاب الله",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-012"
+    },
+    {
+      "id": "st_1792596160550_12",
+      "name": "يزيد احمد محمد علم الدين",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-013"
+    },
+    {
+      "id": "st_1792596160550_13",
+      "name": "يوسف يونس صلاح الروبي",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-014"
+    },
+    {
+      "id": "st_1792596160550_14",
+      "name": "يونس حسام صلاح الدين نيازى",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-015"
+    },
+    {
+      "id": "st_1792596160550_15",
+      "name": "يونس محمد عبد الحليم نصار",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-016"
+    },
+    {
+      "id": "st_1792596160550_16",
+      "name": "سليم احمد مصطفى ابراهيم",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-017"
+    },
+    {
+      "id": "st_1792596160550_17",
+      "name": "مالك مصطفى محمد دهب",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-018"
+    },
+    {
+      "id": "st_1792596160550_18",
+      "name": "محمد محمود الصاوى محمد",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-019"
+    },
+    {
+      "id": "st_1792596160550_19",
+      "name": "سليم اسالم محمد",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-020"
+    },
+    {
+      "id": "st_1792596160550_20",
+      "name": "أدم علاء الدين شتا",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-021"
+    },
+    {
+      "id": "st_1792596160550_21",
+      "name": "زياد محمد عبدالوهاب العوضى",
+      "classId": "class_gr4___a",
+      "track": "english",
+      "studentCode": "GR4-A-022"
+    },
+    {
+      "id": "st_1792596160550_22",
+      "name": "يوسف محمد صبحي شحاته",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-023"
+    },
+    {
+      "id": "st_1792596160550_23",
+      "name": "سيف الدين احمد محمد محمود ابراهيم",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-024"
+    },
+    {
+      "id": "st_1792596160550_24",
+      "name": "حازم عماد سمير الصعيدي",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-025"
+    },
+    {
+      "id": "st_1792596160550_25",
+      "name": "أسمر احمد كمال الدين يوسف",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-026"
+    },
+    {
+      "id": "st_1792596160550_26",
+      "name": "أحمد محمد أحمد مجاهد",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-027"
+    },
+    {
+      "id": "st_1792596160550_27",
+      "name": "مروان محمود ضاحي احمد محمد",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-028"
+    },
+    {
+      "id": "st_1792596160550_28",
+      "name": "ادم وانل ابراهيم احمد",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-029"
+    },
+    {
+      "id": "st_1792596160550_29",
+      "name": "عمر مصطفى فايد محمد",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-030"
+    },
+    {
+      "id": "st_1792596160550_30",
+      "name": "صلاح الدين شريف صلاح محمد",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-031"
+    },
+    {
+      "id": "st_1792596160550_31",
+      "name": "مروان أحمد عادل الشامي",
+      "classId": "class_gr4___b",
+      "track": "english",
+      "studentCode": "GR4-B-032"
+    },
+    {
+      "id": "st_1792596160550_32",
+      "name": "تيم الله صهيب ابوالكامل علي",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-033"
+    },
+    {
+      "id": "st_1792596160550_33",
+      "name": "اسر احمد زكي زكي",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-034"
+    },
+    {
+      "id": "st_1792596160550_34",
+      "name": "البراء أحمد شعبان",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-035"
+    },
+    {
+      "id": "st_1792596160550_35",
+      "name": "حسن نادر حسن محمد",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-036"
+    },
+    {
+      "id": "st_1792596160550_36",
+      "name": "حمزة عامر مجدي الشربيني",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-037"
+    },
+    {
+      "id": "st_1792596160550_37",
+      "name": "حمزه محمد سيد احمد الكناني",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-038"
+    },
+    {
+      "id": "st_1792596160550_38",
+      "name": "حمزه محمد محمد سالم",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-039"
+    },
+    {
+      "id": "st_1792596160550_39",
+      "name": "سيف احمد درويش محمد درويش",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-040"
+    },
+    {
+      "id": "st_1792596160550_40",
+      "name": "عمر احمد درويش محمد درويش",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-041"
+    },
+    {
+      "id": "st_1792596160550_41",
+      "name": "عمر حسن محيي الدين حسين",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-042"
+    },
+    {
+      "id": "st_1792596160550_42",
+      "name": "فهد ماهر احمد حمزه",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-043"
+    },
+    {
+      "id": "st_1792596160550_43",
+      "name": "آدم محمد منير",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-044"
+    },
+    {
+      "id": "st_1792596160550_44",
+      "name": "مازن معتز محمد الوكيل",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-045"
+    },
+    {
+      "id": "st_1792596160550_45",
+      "name": "محمد سيد محمد عوف",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-046"
+    },
+    {
+      "id": "st_1792596160550_46",
+      "name": "معتز محمود محمد المغربي",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-047"
+    },
+    {
+      "id": "st_1792596160550_47",
+      "name": "المعتصم بالله محمد السيد محمد ابراهيم",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-048"
+    },
+    {
+      "id": "st_1792596160550_48",
+      "name": "ياسين عبدالعظيم مصطفى الدرديري",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-049"
+    },
+    {
+      "id": "st_1792596160550_49",
+      "name": "عمر شهاب الدين طارق محمدين",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-050"
+    },
+    {
+      "id": "st_1792596160550_50",
+      "name": "محمد ضياء ربيع الهريجي",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-051"
+    },
+    {
+      "id": "st_1792596160550_51",
+      "name": "محمد وانل ابراهيم احمد",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-052"
+    },
+    {
+      "id": "st_1792596160550_52",
+      "name": "حمزة علي علاء",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-053"
+    },
+    {
+      "id": "st_1792596160550_53",
+      "name": "احمد عمرو رزق",
+      "classId": "class_gr5___a",
+      "track": "english",
+      "studentCode": "GR5-A-054"
+    },
+    {
+      "id": "st_1792596160550_54",
+      "name": "اسر احمد ابراهيم سعادة",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-055"
+    },
+    {
+      "id": "st_1792596160550_55",
+      "name": "اياد محمود يسري محمد",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-056"
+    },
+    {
+      "id": "st_1792596160550_56",
+      "name": "بلال شريف محمد سعيد",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-057"
+    },
+    {
+      "id": "st_1792596160550_57",
+      "name": "خالد احمد محمد محمد عبده",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-058"
+    },
+    {
+      "id": "st_1792596160550_58",
+      "name": "سليم خالد بدر محمد",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-059"
+    },
+    {
+      "id": "st_1792596160550_59",
+      "name": "صالح محمد شعبان محمود بدوي",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-060"
+    },
+    {
+      "id": "st_1792596160550_60",
+      "name": "عاصم احمد محمود المالكي",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-061"
+    },
+    {
+      "id": "st_1792596160550_61",
+      "name": "عبد الله مصطفى بكري العيسوى",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-062"
+    },
+    {
+      "id": "st_1792596160550_62",
+      "name": "عبدالرحمن علي رجب",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-063"
+    },
+    {
+      "id": "st_1792596160550_63",
+      "name": "مازن حسام الدين عبدالمعز",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-064"
+    },
+    {
+      "id": "st_1792596160550_64",
+      "name": "مالك أحمد محمد عبدالعظيم",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-065"
+    },
+    {
+      "id": "st_1792596160550_65",
+      "name": "محمد اسالم محمد حسين احمد",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-066"
+    },
+    {
+      "id": "st_1792596160550_66",
+      "name": "محمد خالد شعبان سالم",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-067"
+    },
+    {
+      "id": "st_1792596160550_67",
+      "name": "محمد ابراهيم عيسى شريدم",
+      "classId": "class_gr6___a",
+      "track": "english",
+      "studentCode": "GR6-A-068"
+    },
+    {
+      "id": "st_1792596160550_68",
+      "name": "أحمد خالد الشربيني",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-069"
+    },
+    {
+      "id": "st_1792596160550_69",
+      "name": "أحمد عبدالحميد أشرف عبدالمطلب",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-070"
+    },
+    {
+      "id": "st_1792596160550_70",
+      "name": "آدم عزت علي خليل",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-071"
+    },
+    {
+      "id": "st_1792596160550_71",
+      "name": "آدم محمود الصاوي محمد",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-072"
+    },
+    {
+      "id": "st_1792596160550_72",
+      "name": "أنس محمد عبدالفتاح",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-073"
+    },
+    {
+      "id": "st_1792596160550_73",
+      "name": "حمزة عبدالله محمد عبد الوكيل",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-074"
+    },
+    {
+      "id": "st_1792596160550_74",
+      "name": "عمر شعبان صابر عبد العزيز",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-075"
+    },
+    {
+      "id": "st_1792596160550_75",
+      "name": "عمر على أحمد يوسف رجب",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-076"
+    },
+    {
+      "id": "st_1792596160550_76",
+      "name": "عمر مصطفى حسن ذكي",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-077"
+    },
+    {
+      "id": "st_1792596160550_77",
+      "name": "كريم حسام الدين عبدالمعز",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-078"
+    },
+    {
+      "id": "st_1792596160550_78",
+      "name": "محمد محمود بدوي",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-079"
+    },
+    {
+      "id": "st_1792596160550_79",
+      "name": "ياسين ابراهيم مصطفى",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-080"
+    },
+    {
+      "id": "st_1792596160550_80",
+      "name": "ياسين احمد عبد الله حليمه",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-081"
+    },
+    {
+      "id": "st_1792596160550_81",
+      "name": "يزيد صالح جمعة عبد الرحمن",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-082"
+    },
+    {
+      "id": "st_1792596160550_82",
+      "name": "احمد محمد احمد علي",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-083"
+    },
+    {
+      "id": "st_1792596160550_83",
+      "name": "انس عبد السلام عطا الله ادم",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-084"
+    },
+    {
+      "id": "st_1792596160550_84",
+      "name": "علي اسلام علي رمضان",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-085"
+    },
+    {
+      "id": "st_1792596160550_85",
+      "name": "مروان خالد عبدالعزيز",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-086"
+    },
+    {
+      "id": "st_1792596160550_86",
+      "name": "عبدالله سامح عبدالمرضي",
+      "classId": "class_gr7___a",
+      "track": "english",
+      "studentCode": "GR7-A-087"
+    },
+    {
+      "id": "st_1792596160550_87",
+      "name": "أحمد جابر رجب البراوي",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-088"
+    },
+    {
+      "id": "st_1792596160550_88",
+      "name": "أنس احمد السيد النجار",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-089"
+    },
+    {
+      "id": "st_1792596160550_89",
+      "name": "إياد محمد أشرف أنور منصور",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-090"
+    },
+    {
+      "id": "st_1792596160550_90",
+      "name": "جاسر شريف عبدالمنعم احمد",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-091"
+    },
+    {
+      "id": "st_1792596160550_91",
+      "name": "عمر محمد عبد الوهاب هجرس",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-092"
+    },
+    {
+      "id": "st_1792596160550_92",
+      "name": "عمر منتصر محمد غنيم",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-093"
+    },
+    {
+      "id": "st_1792596160550_93",
+      "name": "كريم عبدالعظيم مصطفى دريري",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-094"
+    },
+    {
+      "id": "st_1792596160550_94",
+      "name": "كريم محمد احمد محمد عبد الوهاب",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-095"
+    },
+    {
+      "id": "st_1792596160550_95",
+      "name": "محمد احمد شعبان عبد الحساب",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-096"
+    },
+    {
+      "id": "st_1792596160550_96",
+      "name": "محمد مصطفى محمد عامر",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-097"
+    },
+    {
+      "id": "st_1792596160550_97",
+      "name": "يحيى عمرو محمد عيسى",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-098"
+    },
+    {
+      "id": "st_1792596160550_98",
+      "name": "يوسف محمد جمعة",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-099"
+    },
+    {
+      "id": "st_1792596160550_99",
+      "name": "يوسف محمد محمد نصار",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-100"
+    },
+    {
+      "id": "st_1792596160550_100",
+      "name": "ادم فتحي مسعد مسعد",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-101"
+    },
+    {
+      "id": "st_1792596160550_101",
+      "name": "اسامه احمد محمد حجازي",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-102"
+    },
+    {
+      "id": "st_1792596160550_102",
+      "name": "يوسف عبدالعظيم الشيخ",
+      "classId": "class_gr7___b",
+      "track": "english",
+      "studentCode": "GR7-B-103"
+    },
+    {
+      "id": "st_1792596160550_103",
+      "name": "ادم احمد محمد عبدالعظيم",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-104"
+    },
+    {
+      "id": "st_1792596160550_104",
+      "name": "ادم عبدالله مجدي حافظ",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-105"
+    },
+    {
+      "id": "st_1792596160550_105",
+      "name": "انس محمد شعبان محمود بدوي",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-106"
+    },
+    {
+      "id": "st_1792596160550_106",
+      "name": "اياد إبراهيم عيسى كمال شريدم",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-107"
+    },
+    {
+      "id": "st_1792596160550_107",
+      "name": "بدوي محمود بدوي إسحاق",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-108"
+    },
+    {
+      "id": "st_1792596160550_108",
+      "name": "محمد خالد محمد اسماعيل",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-109"
+    },
+    {
+      "id": "st_1792596160550_109",
+      "name": "عادل علي عادل علي احمد",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-110"
+    },
+    {
+      "id": "st_1792596160550_110",
+      "name": "عبد الرحمن خالد محمد الشربيني",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-111"
+    },
+    {
+      "id": "st_1792596160550_111",
+      "name": "عبدالله طه ناصف يونس",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-112"
+    },
+    {
+      "id": "st_1792596160550_112",
+      "name": "محمد عبد الله محمد عبده المطرى",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-113"
+    },
+    {
+      "id": "st_1792596160550_113",
+      "name": "محمد مصطفى خير الله عبد الحميد",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-114"
+    },
+    {
+      "id": "st_1792596160550_114",
+      "name": "محمود احمد عبد العزيز احمد",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-115"
+    },
+    {
+      "id": "st_1792596160550_115",
+      "name": "معاذ محمد حسن محمد القيمة",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-116"
+    },
+    {
+      "id": "st_1792596160550_116",
+      "name": "ياسين احمد حامد جمال الدين",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-117"
+    },
+    {
+      "id": "st_1792596160550_117",
+      "name": "يوسف احمد محمد محمد عبده",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-118"
+    },
+    {
+      "id": "st_1792596160550_118",
+      "name": "زياد أحمد محمد محمود ابراهيم",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-119"
+    },
+    {
+      "id": "st_1792596160550_119",
+      "name": "تميم صهيب ابو المكارم علي",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-120"
+    },
+    {
+      "id": "st_1792596160550_120",
+      "name": "مصطفى اشرف صلاح السقا",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-121"
+    },
+    {
+      "id": "st_1792596160550_121",
+      "name": "ياسين عمرو زكريا غازي",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-122"
+    },
+    {
+      "id": "st_1792596160550_122",
+      "name": "عمر السيد احمد عبد ابراهيم",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-123"
+    },
+    {
+      "id": "st_1792596160550_123",
+      "name": "حمزه محمود محمد مصطفى",
+      "classId": "class_gr8___a",
+      "track": "english",
+      "studentCode": "GR8-A-124"
+    },
+    {
+      "id": "st_1792596160550_124",
+      "name": "أحمد حسن محيي الدين حسن",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-125"
+    },
+    {
+      "id": "st_1792596160550_125",
+      "name": "احمد مجدي محمد الصاوي",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-126"
+    },
+    {
+      "id": "st_1792596160551_126",
+      "name": "أحمد محمد أحمد الغرباوي",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-127"
+    },
+    {
+      "id": "st_1792596160551_127",
+      "name": "أحمد محمود أحمد جندي",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-128"
+    },
+    {
+      "id": "st_1792596160551_128",
+      "name": "زياد محمد محمد غزالي",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-129"
+    },
+    {
+      "id": "st_1792596160551_129",
+      "name": "عمر أحمد محمد على",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-130"
+    },
+    {
+      "id": "st_1792596160551_130",
+      "name": "كريم محمد حسن سعد الشاذلي",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-131"
+    },
+    {
+      "id": "st_1792596160551_131",
+      "name": "محمد احمد محمد عبدالعظيم",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-132"
+    },
+    {
+      "id": "st_1792596160551_132",
+      "name": "مروان محمود محمد المغربي",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-133"
+    },
+    {
+      "id": "st_1792596160551_133",
+      "name": "معتصم باهلل احمد محمد متولي",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-134"
+    },
+    {
+      "id": "st_1792596160551_134",
+      "name": "يوسف شعبان صابر عبد العزيز",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-135"
+    },
+    {
+      "id": "st_1792596160551_135",
+      "name": "اياد احمد محمد طلعت",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-136"
+    },
+    {
+      "id": "st_1792596160551_136",
+      "name": "انس شريف صلاح محمد",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-137"
+    },
+    {
+      "id": "st_1792596160551_137",
+      "name": "عمر هشام السيد رضوان",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-138"
+    },
+    {
+      "id": "st_1792596160551_138",
+      "name": "عبدالله عمرو رزق",
+      "classId": "class_gr9___a",
+      "track": "english",
+      "studentCode": "GR9-A-139"
+    }
+  ],
+  "sessions": [],
+  "teacherPin": "123654"
+}

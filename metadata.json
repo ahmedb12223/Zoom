@@ -1,0 +1,6 @@
+{
+  "name": "بوابة تحضير زوم الذكية | Zoom Attendance Gateway",
+  "description": "منصة ذكية متكاملة لإدارة وتحضير حصص زوم المباشرة للمدارس واللغات، تدعم الفصول ومسارات اللغات وتقارير الغياب للواتساب.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
