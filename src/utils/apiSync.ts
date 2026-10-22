@@ -19,6 +19,12 @@ function getApiUrl(endpoint: string): string {
     if (envBase) {
       return `${envBase.replace(/\/+$/, '')}${cleanEndpoint}`;
     }
+    if (typeof window !== 'undefined' && window.location) {
+      const hostname = window.location.hostname;
+      if (hostname.includes('github.io') || (!hostname.includes('localhost') && !hostname.includes('run.app') && !hostname.includes('aistudio'))) {
+        return `https://ais-dev-2gzy6cuwtsdgl5nzfu44ep-256426744382.europe-west2.run.app${cleanEndpoint}`;
+      }
+    }
   } catch {
     // fallback to relative path
   }
