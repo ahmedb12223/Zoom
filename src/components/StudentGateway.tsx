@@ -16,7 +16,8 @@ import { AttendanceRecord, ClassSession, Student, TeacherProfile } from '../type
 import { filterSuggestions, findBestMatch, normalizeText, matchesStudentSearch } from '../utils/arabicFuzzy';
 import { getTrackLabel } from '../utils/whatsappFormatter';
 import { ensureAbsoluteUrl } from '../utils/urlHelper';
-import { recordAttendanceViaServer } from '../utils/apiSync';
+import { recordAttendanceViaServer, fetchServerData } from '../utils/apiSync';
+import { DEFAULT_STUDENTS } from '../utils/storage';
 import { TeacherAuthModal } from './TeacherAuthModal';
 
 interface StudentGatewayProps {
@@ -54,24 +55,28 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
   // Guarantee valid absolute Zoom URL (e.g. https://...)
   const cleanZoomUrl = ensureAbsoluteUrl(session.zoomUrl || 'https://zoom.us/join');
 
-  // Fallback to fetch full student roster from server if opened on new device/tab
-  const [activeStudents, setActiveStudents] = useState<Student[]>(allStudents);
+  // Fallback to fetch full student roster from server or DEFAULT_STUDENTS if opened on new device/tab/incognito
+  const [activeStudents, setActiveStudents] = useState<Student[]>(
+    allStudents && allStudents.length > 0 ? allStudents : DEFAULT_STUDENTS
+  );
 
   useEffect(() => {
-    const hasClassStudents = allStudents.some((s) => s.classId === session.classId);
-    if (!hasClassStudents) {
-      fetch('/api/data')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && Array.isArray(data.students) && data.students.length > 0) {
-            setActiveStudents(data.students);
-          }
-        })
-        .catch(() => {});
-    } else {
+    if (allStudents && allStudents.length > 0) {
       setActiveStudents(allStudents);
+      return;
     }
-  }, [allStudents, session.classId]);
+    fetchServerData()
+      .then((data) => {
+        if (data && Array.isArray(data.students) && data.students.length > 0) {
+          setActiveStudents(data.students);
+        } else {
+          setActiveStudents(DEFAULT_STUDENTS);
+        }
+      })
+      .catch(() => {
+        setActiveStudents(DEFAULT_STUDENTS);
+      });
+  }, [allStudents]);
 
   // Relevant students for this session (filtered by class and track)
   const sessionStudents = activeStudents.filter((s) => {
@@ -164,7 +169,7 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
         teacherId: session.teacherId,
       });
 
-      if (result) {
+      if (result && result.success) {
         serverRecordResult = result.record;
         if (result.isReentry) {
           setAlreadyRegisteredMessage(
@@ -175,11 +180,25 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
         }
       }
     } catch (err) {
-      console.warn('Server record attendance error:', err);
+      console.warn('Server record attendance error (using local fallback):', err);
     }
 
-    // 2. Update local state authoritative record
-    onRecordAttendance(session.id, entered, targetStudent, 1.0, serverRecordResult);
+    const localRecord: AttendanceRecord = {
+      id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      sessionId: session.id,
+      studentId: targetStudent.id,
+      studentName: entered,
+      matchedRosterName: targetStudent.name,
+      track: targetStudent.track,
+      timestamp: new Date().toISOString(),
+      lastJoinedAt: new Date().toISOString(),
+      joinCount: 1,
+      status: 'present',
+      confidenceScore: 1.0,
+    };
+
+    // 2. Update local state authoritative record with server result or local fallback
+    onRecordAttendance(session.id, entered, targetStudent, 1.0, serverRecordResult || localRecord);
     setIsSubmitted(true);
     setIsSubmitting(false);
   };
