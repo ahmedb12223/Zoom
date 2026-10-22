@@ -7,6 +7,24 @@ import { ClassSession, AttendanceRecord, Student, SchoolClass, TeacherProfile } 
 
 const SYNC_CHANNEL_NAME = 'zoom_attendance_sync_bus';
 
+/**
+ * Dynamically resolves the API base URL.
+ * Works seamlessly on any domain, subpath, custom domain, or proxy server.
+ * Supports VITE_API_URL environment variable if backend is hosted on a separate domain.
+ */
+function getApiUrl(endpoint: string): string {
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  try {
+    const envBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || '';
+    if (envBase) {
+      return `${envBase.replace(/\/+$/, '')}${cleanEndpoint}`;
+    }
+  } catch {
+    // fallback to relative path
+  }
+  return cleanEndpoint;
+}
+
 // BroadcastChannel for instant zero-latency cross-tab synchronization
 function getBroadcastChannel(): BroadcastChannel | null {
   if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -75,7 +93,7 @@ export async function fetchServerData(): Promise<{
   sessions: ClassSession[];
 } | null> {
   try {
-    const res = await fetch('/api/data', { cache: 'no-store' });
+    const res = await fetch(getApiUrl('/api/data'), { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {
@@ -89,7 +107,7 @@ export async function fetchServerData(): Promise<{
  */
 export async function fetchServerSessions(): Promise<ClassSession[] | null> {
   try {
-    const res = await fetch('/api/sessions', { cache: 'no-store' });
+    const res = await fetch(getApiUrl('/api/sessions'), { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {
@@ -110,7 +128,7 @@ export async function syncStateToServer(data: {
 }): Promise<boolean> {
   const OFFLINE_QUEUE_KEY = 'zoom_attend_offline_queue_v1';
   try {
-    const res = await fetch('/api/sync', {
+    const res = await fetch(getApiUrl('/api/sync'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -131,7 +149,6 @@ export async function syncStateToServer(data: {
         const rawQueue = localStorage.getItem(OFFLINE_QUEUE_KEY);
         const queue = rawQueue ? JSON.parse(rawQueue) : [];
         queue.push(data);
-        // Keep max last 10 items
         if (queue.length > 10) queue.shift();
         localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
       } catch {
@@ -150,13 +167,21 @@ export async function recordAttendanceViaServer(
   studentName: string,
   matchedStudent?: Student,
   confidenceScore = 1.0,
-  sessionDetails?: Partial<ClassSession>
-): Promise<{ success: boolean; record?: AttendanceRecord; session?: ClassSession; isReentry?: boolean }> {
+  sessionDetails?: {
+    classId?: string;
+    className?: string;
+    sessionTitle?: string;
+    zoomUrl?: string;
+    targetTrack?: string;
+    teacherId?: string;
+  }
+): Promise<{ success: boolean; record?: AttendanceRecord; session?: ClassSession; error?: string; isReentry?: boolean }> {
   try {
     const payload = {
       studentName: studentName.trim(),
       matchedStudent,
       confidenceScore,
+      classId: sessionDetails?.classId,
       className: sessionDetails?.className,
       sessionTitle: sessionDetails?.sessionTitle,
       zoomUrl: sessionDetails?.zoomUrl,
@@ -164,7 +189,7 @@ export async function recordAttendanceViaServer(
       teacherId: sessionDetails?.teacherId,
     };
 
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/attendance`, {
+    const res = await fetch(getApiUrl(`/api/sessions/${encodeURIComponent(sessionId)}/attendance`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -173,7 +198,6 @@ export async function recordAttendanceViaServer(
     if (res.ok) {
       const data = await res.json();
       if (data.record) {
-        // Broadcast across all open browser windows immediately
         broadcastSyncEvent({
           type: 'ATTENDANCE_RECORDED',
           sessionId,
@@ -182,31 +206,14 @@ export async function recordAttendanceViaServer(
         });
       }
       return data;
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      return { success: false, error: errJson.error || 'تعذر تسجيل الحضور' };
     }
   } catch (err) {
-    console.warn('Failed to record attendance to server, fallback to broadcast:', err);
+    console.warn('Failed to record attendance to server:', err);
+    return { success: false, error: 'خطأ في الاتصال بالخادم' };
   }
-
-  // Fallback if server request fails: generate local record and broadcast
-  const localRecord: AttendanceRecord = {
-    id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    sessionId,
-    studentId: matchedStudent?.id,
-    studentName: studentName.trim(),
-    matchedRosterName: matchedStudent?.name,
-    track: matchedStudent?.track,
-    timestamp: new Date().toISOString(),
-    status: matchedStudent ? 'present' : 'guest',
-    confidenceScore,
-  };
-
-  broadcastSyncEvent({
-    type: 'ATTENDANCE_RECORDED',
-    sessionId,
-    record: localRecord,
-  });
-
-  return { success: true, record: localRecord };
 }
 
 /**
@@ -214,7 +221,7 @@ export async function recordAttendanceViaServer(
  */
 export async function deleteClassOnServer(classId: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/classes/${encodeURIComponent(classId)}`, {
+    const res = await fetch(getApiUrl(`/api/classes/${encodeURIComponent(classId)}`), {
       method: 'DELETE',
     });
     return res.ok;
@@ -229,7 +236,7 @@ export async function deleteClassOnServer(classId: string): Promise<boolean> {
  */
 export async function batchDeleteClassesOnServer(classIds: string[]): Promise<boolean> {
   try {
-    const res = await fetch('/api/classes/batch-delete', {
+    const res = await fetch(getApiUrl('/api/classes/batch-delete'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ classIds }),
@@ -246,7 +253,7 @@ export async function batchDeleteClassesOnServer(classIds: string[]): Promise<bo
  */
 export async function deleteStudentOnServer(studentId: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/students/${encodeURIComponent(studentId)}`, {
+    const res = await fetch(getApiUrl(`/api/students/${encodeURIComponent(studentId)}`), {
       method: 'DELETE',
     });
     return res.ok;
@@ -261,7 +268,7 @@ export async function deleteStudentOnServer(studentId: string): Promise<boolean>
  */
 export async function batchDeleteStudentsOnServer(studentIds: string[]): Promise<boolean> {
   try {
-    const res = await fetch('/api/students/batch-delete', {
+    const res = await fetch(getApiUrl('/api/students/batch-delete'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentIds }),
@@ -281,7 +288,7 @@ export async function batchUpdateStudentsOnServer(
   updates: { track?: 'english' | 'arabic'; classId?: string }
 ): Promise<boolean> {
   try {
-    const res = await fetch('/api/students/batch-update', {
+    const res = await fetch(getApiUrl('/api/students/batch-update'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentIds, ...updates }),
@@ -298,7 +305,7 @@ export async function batchUpdateStudentsOnServer(
  */
 export async function deleteSessionOnServer(sessionId: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+    const res = await fetch(getApiUrl(`/api/sessions/${encodeURIComponent(sessionId)}`), {
       method: 'DELETE',
     });
     return res.ok;
@@ -313,7 +320,7 @@ export async function deleteSessionOnServer(sessionId: string): Promise<boolean>
  */
 export async function batchDeleteSessionsOnServer(sessionIds: string[], teacherId?: string): Promise<boolean> {
   try {
-    const res = await fetch('/api/sessions/batch-delete', {
+    const res = await fetch(getApiUrl('/api/sessions/batch-delete'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionIds, teacherId }),
@@ -330,7 +337,7 @@ export async function batchDeleteSessionsOnServer(sessionIds: string[], teacherI
  */
 export async function resetAttendanceOnServer(teacherId?: string): Promise<boolean> {
   try {
-    const res = await fetch('/api/attendance/reset', {
+    const res = await fetch(getApiUrl('/api/attendance/reset'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teacherId }),
@@ -347,7 +354,7 @@ export async function resetAttendanceOnServer(teacherId?: string): Promise<boole
  */
 export async function createOrUpdateSessionOnServer(session: ClassSession): Promise<boolean> {
   try {
-    const res = await fetch('/api/sessions', {
+    const res = await fetch(getApiUrl('/api/sessions'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(session),
@@ -360,7 +367,7 @@ export async function createOrUpdateSessionOnServer(session: ClassSession): Prom
 }
 
 /**
- * Listens for real-time Server-Sent Events (SSE) from server across all clients
+ * Listens for real-time Server-Sent Events (SSE) from server across all clients with exponential backoff reconnection.
  */
 export function listenForServerEvents(callback: (event: any) => void): () => void {
   if (typeof window === 'undefined' || !('EventSource' in window)) {
@@ -370,11 +377,17 @@ export function listenForServerEvents(callback: (event: any) => void): () => voi
   let eventSource: EventSource | null = null;
   let reconnectTimer: NodeJS.Timeout | null = null;
   let isClosed = false;
+  let retryCount = 0;
 
   function connect() {
     if (isClosed) return;
     try {
-      eventSource = new EventSource('/api/events');
+      const url = getApiUrl('/api/events');
+      eventSource = new EventSource(url);
+
+      eventSource.onopen = () => {
+        retryCount = 0; // reset backoff on successful connection
+      };
 
       eventSource.onmessage = (e) => {
         try {
@@ -394,7 +407,10 @@ export function listenForServerEvents(callback: (event: any) => void): () => voi
           eventSource = null;
         }
         if (!isClosed) {
-          reconnectTimer = setTimeout(connect, 3000);
+          retryCount++;
+          // Exponential backoff: 1s, 2s, 4s, 8s, max 15s
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 15000);
+          reconnectTimer = setTimeout(connect, delay);
         }
       };
     } catch (err) {
@@ -441,7 +457,7 @@ export async function mergeDuplicateClassesOnServer(): Promise<{
   sessions?: ClassSession[];
 }> {
   try {
-    const res = await fetch('/api/classes/merge-duplicates', {
+    const res = await fetch(getApiUrl('/api/classes/merge-duplicates'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -476,10 +492,11 @@ export async function forceSyncBidirectional(currentState: {
   const OFFLINE_QUEUE_KEY = 'zoom_attend_offline_queue_v1';
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.getItem(OFFLINE_QUEUE_KEY);
       localStorage.removeItem(OFFLINE_QUEUE_KEY);
     }
     // 1. Post latest state
-    await fetch('/api/sync', {
+    await fetch(getApiUrl('/api/sync'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(currentState),
@@ -494,4 +511,3 @@ export async function forceSyncBidirectional(currentState: {
   }
   return { success: false };
 }
-
