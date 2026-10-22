@@ -37,9 +37,23 @@ export function buildStudentAttendanceLink(
   session: ClassSession,
   teacher?: TeacherProfile
 ): string {
-  const origin = window.location.origin;
+  let baseOrigin = window.location.origin;
+  try {
+    const envBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || '';
+    if (envBase) {
+      baseOrigin = envBase.replace(/\/+$/, '');
+    } else if (typeof window !== 'undefined' && window.location) {
+      const hostname = window.location.hostname;
+      if (hostname.includes('github.io') || (!hostname.includes('localhost') && !hostname.includes('run.app') && !hostname.includes('aistudio'))) {
+        baseOrigin = 'https://ais-dev-2gzy6cuwtsdgl5nzfu44ep-256426744382.europe-west2.run.app';
+      }
+    }
+  } catch {
+    // fallback
+  }
+
   const pathname = window.location.pathname;
-  const baseUrl = `${origin}${pathname}`;
+  const baseUrl = `${baseOrigin}${pathname}`;
 
   const cleanZoomUrl = ensureAbsoluteUrl(session.zoomUrl);
 
