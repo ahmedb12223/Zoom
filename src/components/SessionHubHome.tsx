@@ -31,7 +31,13 @@ import { ClassSession, SchoolClass, Student, TeacherProfile, LanguageTrack } fro
 import { QRCodeModal } from './QRCodeModal';
 import { EditSessionModal } from './EditSessionModal';
 import { ConfirmModal } from './ConfirmModal';
-import { buildStudentAttendanceLink, ensureAbsoluteUrl } from '../utils/urlHelper';
+import {
+  buildStudentAttendanceLink,
+  ensureAbsoluteUrl,
+  getPublishedDomain,
+  setPublishedDomain,
+  DEFAULT_PUBLISHED_DOMAIN
+} from '../utils/urlHelper';
 import { generateCombinedTeacherAbsenteeReport } from '../utils/whatsappFormatter';
 import { normalizeText } from '../utils/arabicFuzzy';
 import { isAhmedBadawi } from '../utils/storage';
@@ -160,6 +166,11 @@ export const SessionHubHome: React.FC<SessionHubHomeProps> = ({
       setSelectedClassId(classes[0].id);
     }
   }, [classes, selectedClassId]);
+
+  // Published domain state & configuration
+  const [publishedDomain, setPublishedDomainState] = useState<string>(() => getPublishedDomain());
+  const [isEditingDomainBanner, setIsEditingDomainBanner] = useState(false);
+  const [domainInputValue, setDomainInputValue] = useState<string>(() => getPublishedDomain());
 
   // Check student tracks for the selected class
   const activeClass = classes.find((c) => c.id === selectedClassId) || classes[0];
@@ -351,8 +362,85 @@ export const SessionHubHome: React.FC<SessionHubHomeProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* 1. COMPACT QUICK-LAUNCHER BAR (بدون رابط افتراضي، بدون عدد الطلاب) */}
+      {/* Universal Published Domain Banner (لضمان عمل الروابط على كافة الأجهزة) */}
       {/* ------------------------------------------------------------- */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black text-slate-900">نطاق نشر المنصة لروابط وباركود الطلاب</span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-md">
+                  يعمل على الآيفون والاندرويد بدون تسجيل دخول
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                تعتمد جميع روابط الطلاب ورموز QR كود تلقائياً على هذا النطاق المنشور لضمان التحضير المباشر
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {isEditingDomainBanner ? (
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <input
+                  type="text"
+                  value={domainInputValue}
+                  onChange={(e) => setDomainInputValue(e.target.value)}
+                  placeholder="https://example.com"
+                  className="px-2.5 py-1 text-xs font-mono border border-slate-300 rounded-lg text-slate-800 dir-ltr text-left w-48 sm:w-56 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (domainInputValue.trim()) {
+                      setPublishedDomain(domainInputValue.trim());
+                      setPublishedDomainState(getPublishedDomain());
+                      setIsEditingDomainBanner(false);
+                    }
+                  }}
+                  className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 cursor-pointer"
+                >
+                  حفظ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishedDomain('');
+                    const actualOrigin = getPublishedDomain();
+                    setDomainInputValue(actualOrigin);
+                    setPublishedDomainState(actualOrigin);
+                    setIsEditingDomainBanner(false);
+                  }}
+                  className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 cursor-pointer"
+                  title="استعادة رابط الموقع التلقائي الفعلي"
+                >
+                  تلقائي
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg dir-ltr">
+                  {publishedDomain}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDomainInputValue(publishedDomain);
+                    setIsEditingDomainBanner(true);
+                  }}
+                  className="text-xs text-slate-500 hover:text-indigo-600 px-2 py-1 rounded-lg hover:bg-slate-50 font-bold transition-colors cursor-pointer"
+                >
+                  تعديل
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       <div
         id="quick-add-session-card"
         className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden transition-all"
@@ -949,6 +1037,7 @@ export const SessionHubHome: React.FC<SessionHubHomeProps> = ({
           url={qrModalData.url}
           title={qrModalData.title}
           subtitle={qrModalData.subtitle}
+          onDomainChanged={() => setPublishedDomainState(getPublishedDomain())}
         />
       )}
 

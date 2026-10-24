@@ -1,4 +1,49 @@
 import type { SchoolClass, Student, ClassSession, TeacherProfile } from '../types/index.ts';
+import { normalizeText } from './arabicFuzzy.ts';
+
+/**
+ * The exact 17 students belonging to the Arabic track across all grades.
+ */
+export const OFFICIAL_ARABIC_STUDENT_NAMES = [
+  'تيم الله صهيب ابوالكامل علي',
+  'محمد وائل ابراهيم احمد',
+  'محمد ابراهيم عيسى شريدم',
+  'عمر على أحمد يوسف رجب',
+  'ياسين ابراهيم مصطفى',
+  'ياسين احمد عبد الله حليمه',
+  'احمد محمد احمد علي',
+  'مروان خالد عبدالعزيز',
+  'عبدالله سامح عبدالمرضي',
+  'ادم احمد محمد عبدالعظيم',
+  'اياد إبراهيم عيسى كمال شريدم',
+  'عادل علي عادل علي احمد',
+  'زياد أحمد محمد محمود ابراهيم',
+  'تميم صهيب ابو المكارم علي',
+  'مصطفى اشرف صلاح السقا',
+  'ياسين عمرو زكريا غازي',
+  'عمر السيد احمد عبد ابراهيم'
+];
+
+const NORMALIZED_ARABIC_NAMES = new Set(
+  OFFICIAL_ARABIC_STUDENT_NAMES.map((name) => normalizeText(name))
+);
+
+/**
+ * Enforces official Arabic vs English tracks on any student array using fuzzy normalized Arabic matching
+ */
+export function enforceOfficialStudentTracks(studentsList: Student[]): Student[] {
+  if (!Array.isArray(studentsList) || studentsList.length === 0) {
+    return DEFAULT_STUDENTS;
+  }
+  return studentsList.map((st) => {
+    const norm = normalizeText(st.name || '');
+    const isArabic = NORMALIZED_ARABIC_NAMES.has(norm);
+    return {
+      ...st,
+      track: isArabic ? ('arabic' as const) : ('english' as const),
+    };
+  });
+}
 
 const STORAGE_KEYS = {
   TEACHERS: 'zoom_attend_teachers_v3',
@@ -299,7 +344,7 @@ export const DEFAULT_SESSIONS: ClassSession[] = [];
 // In-memory fallback if localStorage is not available (Node.js or private mode)
 const memoryStore: Record<string, string> = {};
 
-const safeStorage = {
+export const safeStorage = {
   getItem: (key: string): string | null => {
     if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
       try {
@@ -319,6 +364,16 @@ const safeStorage = {
       }
     }
     memoryStore[key] = value;
+  },
+  removeItem: (key: string): void => {
+    if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        // fallback
+      }
+    }
+    delete memoryStore[key];
   },
 };
 
@@ -364,21 +419,26 @@ export const storage = {
 
   getStudents: (): Student[] => {
     try {
-      const version = safeStorage.getItem(STORAGE_KEYS.DATA_VERSION);
       const data = safeStorage.getItem(STORAGE_KEYS.STUDENTS);
-      if (version && data) {
-        return JSON.parse(data);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const enforced = enforceOfficialStudentTracks(parsed);
+          safeStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(enforced));
+          return enforced;
+        }
       }
     } catch (e) {
       console.error(e);
     }
-    safeStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(DEFAULT_STUDENTS));
-    safeStorage.setItem(STORAGE_KEYS.DATA_VERSION, 'true');
-    return DEFAULT_STUDENTS;
+    const cleanDefaults = enforceOfficialStudentTracks(DEFAULT_STUDENTS);
+    safeStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(cleanDefaults));
+    return cleanDefaults;
   },
 
   saveStudents: (students: Student[]) => {
-    safeStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+    const enforced = enforceOfficialStudentTracks(students);
+    safeStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(enforced));
   },
 
   getSessions: (): ClassSession[] => {

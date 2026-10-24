@@ -21,6 +21,7 @@ import { ClassSession, LanguageTrack, Student, TeacherProfile } from '../types';
 import { QRCodeModal } from './QRCodeModal';
 import { generateWhatsAppAbsenteeReport, getTrackLabel } from '../utils/whatsappFormatter';
 import { exportAttendanceToCSV } from '../utils/excelParser';
+import { buildStudentAttendanceLink } from '../utils/urlHelper';
 
 interface LiveSessionMonitorProps {
   session: ClassSession;
@@ -45,8 +46,8 @@ export const LiveSessionMonitor: React.FC<LiveSessionMonitorProps> = ({
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
 
-  // The session gateway URL
-  const gatewayUrl = `${window.location.origin}${window.location.pathname}#attend/${session.id}`;
+  // The session gateway URL using the authoritative published domain
+  const gatewayUrl = buildStudentAttendanceLink(session, teacher);
 
   // Filter targeted roster students by class and target track!
   const targetedStudents = allStudents.filter((student) => {

@@ -17,6 +17,7 @@ import {
 import { ClassSession, SchoolClass, Student, TeacherProfile } from '../types';
 import { QRCodeModal } from './QRCodeModal';
 import { generateWhatsAppAbsenteeReport } from '../utils/whatsappFormatter';
+import { buildStudentAttendanceLink } from '../utils/urlHelper';
 
 interface EasyTeacherDashboardProps {
   currentTeacher: TeacherProfile;
@@ -78,7 +79,7 @@ export const EasyTeacherDashboard: React.FC<EasyTeacherDashboardProps> = ({
   const absentCount = absentStudents.length;
 
   const gatewayUrl = activeSession
-    ? `${window.location.origin}${window.location.pathname}#attend/${activeSession.id}`
+    ? buildStudentAttendanceLink(activeSession, currentTeacher)
     : '';
 
   // Copy link

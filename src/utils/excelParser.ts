@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { SchoolClass, Student, ClassSession } from '../types/index.ts';
+import { enforceOfficialStudentTracks } from './storage.ts';
 
 export interface ParsedStudentRow {
   name: string;
@@ -578,7 +579,7 @@ export function mergeDuplicateClasses(
 
   return {
     classes: mergedClasses,
-    students: Array.from(studentMap.values()),
+    students: enforceOfficialStudentTracks(Array.from(studentMap.values())),
     sessions: updatedSessions,
     mergedCount,
   };

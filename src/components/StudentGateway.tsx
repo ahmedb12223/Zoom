@@ -79,11 +79,33 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
   }, [allStudents]);
 
   // Relevant students for this session (filtered by class and track)
-  const sessionStudents = activeStudents.filter((s) => {
+  let sessionStudents = activeStudents.filter((s) => {
     if (s.classId !== session.classId) return false;
     if (session.targetTrack === 'all') return true;
     return s.track === session.targetTrack;
   });
+
+  // Fallback 1: If no students found by exact classId (e.g. URL opened on external browser without local storage),
+  // match by normalized classId or class name keywords
+  if (sessionStudents.length === 0 && (session.classId || session.className)) {
+    const normSessionClass = normalizeText(session.className || '');
+    const normSessionId = normalizeText(session.classId || '');
+    sessionStudents = activeStudents.filter((s) => {
+      const normStudentClassId = normalizeText(s.classId || '');
+      if (!normStudentClassId) return false;
+      return (
+        normStudentClassId === normSessionId ||
+        normStudentClassId.includes(normSessionId) ||
+        normSessionId.includes(normStudentClassId) ||
+        (normSessionClass && normStudentClassId.includes(normSessionClass))
+      );
+    });
+  }
+
+  // Fallback 2: If still empty, use all active students so the student is never blocked
+  if (sessionStudents.length === 0) {
+    sessionStudents = activeStudents;
+  }
 
   // Sorted alphabetically in Arabic
   const sortedClassStudents = [...sessionStudents].sort((a, b) =>
@@ -150,15 +172,28 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
     return () => clearInterval(interval);
   }, [isSubmitted, triggerZoomRedirect]);
 
-  // Handle student submission (Strictly requires selectedStudent from roster)
+  const [submittingStudentId, setSubmittingStudentId] = useState<string | null>(null);
+
+  // Set of student IDs that have already attended this session
+  const attendedStudentIds = new Set(
+    (session.attendance || []).map((r) => r.studentId).filter(Boolean)
+  );
+
+  // Handle student submission (Instant 1-Click attendance + Zoom transfer)
   const handleSubmitName = async (studentToSubmit?: Student) => {
     const targetStudent = studentToSubmit || selectedStudent;
     if (!targetStudent || isSubmitting) return;
 
     setIsSubmitting(true);
+    setSubmittingStudentId(targetStudent.id);
+    setSelectedStudent(targetStudent);
+    setNameInput(targetStudent.name);
     const entered = targetStudent.name.trim();
 
-    // 1. Record attendance to server API & BroadcastChannel for real-time live sync
+    // 1. Synchronously trigger browser navigation / new tab during the click gesture
+    triggerZoomRedirect();
+
+    // 2. Record attendance to server API & BroadcastChannel for real-time live sync
     let serverRecordResult: AttendanceRecord | undefined;
     try {
       const result = await recordAttendanceViaServer(session.id, entered, targetStudent, 1.0, {
@@ -173,7 +208,7 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
         serverRecordResult = result.record;
         if (result.isReentry) {
           setAlreadyRegisteredMessage(
-            `أهلاً بعودتك يا ${targetStudent.name}! تم تحديث وقت دخولك (${result.record?.joinCount || 2}×). جاري نقلك إلى زووم...`
+            `أهلاً بعودتك يا ${targetStudent.name}! تم توثيق وقت دخولك مجدداً (${result.record?.joinCount || 2}×). جاري نقلك إلى زووم...`
           );
         } else {
           setAlreadyRegisteredMessage(null);
@@ -197,20 +232,51 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
       confidenceScore: 1.0,
     };
 
-    // 2. Update local state authoritative record with server result or local fallback
+    // 3. Update local state authoritative record with server result or local fallback
     onRecordAttendance(session.id, entered, targetStudent, 1.0, serverRecordResult || localRecord);
     setIsSubmitted(true);
     setIsSubmitting(false);
+
+    // 4. Reliable mobile direct URL navigation fallback (ensures mobile Safari & Android launch Zoom app directly)
+    try {
+      setTimeout(() => {
+        window.location.href = cleanZoomUrl;
+      }, 500);
+    } catch {
+      // ignore
+    }
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(cleanZoomUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+  const handleCopyLink = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(cleanZoomUrl);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+        return;
+      }
+    } catch {
+      // fallback to input/textarea copy
+    }
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = cleanZoomUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      // ignore
+    }
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-indigo-50/70 via-slate-50 to-white flex flex-col justify-between p-4 sm:p-6 dir-rtl font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-linear-to-b from-indigo-50/70 via-slate-50 to-white flex flex-col justify-between p-3 sm:p-6 dir-rtl font-sans selection:bg-indigo-100 selection:text-indigo-900">
       {/* Top Bar / Teacher Return switch for preview testing */}
       <div className="max-w-md w-full mx-auto flex items-center justify-between text-xs text-slate-500 py-2">
         <div className="flex items-center gap-1.5 font-bold text-slate-700">
@@ -244,16 +310,16 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
       </div>
 
       {/* Main Card */}
-      <div className="max-w-md w-full mx-auto my-auto bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 sm:p-8 transition-all">
+      <div className="max-w-md w-full mx-auto my-auto bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-5 sm:p-7 transition-all">
         {!isSubmitted ? (
-          <div className="space-y-6 text-center">
+          <div className="space-y-4 text-center">
             {/* Header Icon & Session Details */}
             <div>
-              <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-600/25">
-                <Video className="w-8 h-8" />
+              <div className="w-14 h-14 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-600/25">
+                <Video className="w-7 h-7" />
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold mb-2 border border-indigo-100">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold mb-1.5 border border-indigo-100">
                 <span>فصل {session.className}</span>
                 {session.targetTrack !== 'all' && (
                   <>
@@ -263,11 +329,11 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
                 )}
               </div>
 
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug">
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
                 {session.sessionTitle}
               </h1>
 
-              <p className="text-xs text-slate-500 mt-1.5">
+              <p className="text-xs text-slate-500 mt-1">
                 حصة <span className="font-bold text-slate-700">{teacher.subject}</span> مع المعلم{' '}
                 <span className="font-bold text-slate-700">{teacher.name}</span>
               </p>
@@ -293,7 +359,7 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
                     }}
                     onFocus={() => setIsDropdownOpen(true)}
                     placeholder="ابدأ بكتابة اسمك للبحث في القائمة..."
-                    className="w-full pr-10 pl-4 py-3 text-sm font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-all text-slate-900 placeholder:text-slate-400"
+                    className="w-full pr-10 pl-4 py-3 text-base sm:text-sm font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-all text-slate-900 placeholder:text-slate-400 touch-manipulation"
                   />
                 </div>
 
@@ -306,7 +372,7 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
                       </div>
                       <div>
                         <div className="font-extrabold text-emerald-950">{selectedStudent.name}</div>
-                        <div className="text-[10px] text-emerald-700">تم اختيار الاسم المسجل في الكشف بنجاح</div>
+                        <div className="text-[10px] text-emerald-700">تم اختيار اسمك بنجاح من الكشف الرسمي</div>
                       </div>
                     </div>
                     <span
@@ -333,11 +399,13 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
 
                     {filteredRoster.length === 0 ? (
                       <div className="p-4 text-center text-xs text-slate-400 font-medium">
-                        لم يتم العثور على اسم ينتهي أو يبدأ بـ "{nameInput}". تأكد من كتابة الاسم الصحيح.
+                        لم يتم العثور على اسم يطابق "{nameInput}". تأكد من كتابة الاسم كما هو في الكشف.
                       </div>
                     ) : (
                       filteredRoster.map((student) => {
                         const isSelected = selectedStudent?.id === student.id;
+                        const isAttended = attendedStudentIds.has(student.id);
+
                         return (
                           <div
                             key={student.id}
@@ -372,15 +440,22 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
                               <span className="font-bold">{student.name}</span>
                             </div>
 
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                                student.track === 'english'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {student.track === 'english' ? 'لغات' : 'عربي'}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {isAttended && (
+                                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-semibold">
+                                  مسجل مسبقاً
+                                </span>
+                              )}
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
+                                  student.track === 'english'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}
+                              >
+                                {student.track === 'english' ? 'لغات' : 'عربي'}
+                              </span>
+                            </div>
                           </div>
                         );
                       })
@@ -401,7 +476,7 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
               type="button"
               onClick={() => handleSubmitName()}
               disabled={!selectedStudent || isSubmitting}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-bold text-sm sm:text-base shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer touch-manipulation active:scale-[0.98]"
             >
               <CheckCircle2 className="w-5 h-5" />
               <span>{isSubmitting ? 'جاري تسجيل حضورك...' : 'تسجيل الحضور والدخول لزوم'}</span>
@@ -451,9 +526,9 @@ export const StudentGateway: React.FC<StudentGatewayProps> = ({
                 onClick={() => {
                   redirectTriggeredRef.current = true;
                 }}
-                className="w-full py-4 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-extrabold text-base shadow-xl shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                className="w-full py-4 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-extrabold text-base shadow-xl shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 group cursor-pointer touch-manipulation active:scale-[0.98]"
               >
-                <span>الانتقال إلى زوم الآن (فتح في نافذة جديدة)</span>
+                <span>الانتقال إلى زوم الآن (فتح مباشر)</span>
                 <ExternalLink className="w-5 h-5 group-hover:translate-x-[-2px] transition-transform" />
               </a>
 

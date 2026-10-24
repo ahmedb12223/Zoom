@@ -27,7 +27,7 @@ import { MasterSyncModal } from './components/MasterSyncModal';
 import { normalizeText } from './utils/arabicFuzzy';
 import { mergeDuplicateClasses } from './utils/excelParser';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
-import { storage } from './utils/storage';
+import { storage, enforceOfficialStudentTracks } from './utils/storage';
 import { ClassSession, SchoolClass, Student, TeacherProfile, LanguageTrack, AttendanceRecord } from './types/index.ts';
 import {
   parseAttendanceFromUrl,
@@ -76,17 +76,8 @@ export default function App() {
   // URL Attendance routing (supports query parameters ?attend=... as well as #attend/...)
   const [urlAttendance, setUrlAttendance] = useState<ParsedAttendanceInfo>(() => parseAttendanceFromUrl());
   const [attendSessionId, setAttendSessionId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search);
-      // If opened at base URL without ?attend= or ?session=, default directly to Teacher Dashboard
-      if (!searchParams.has('attend') && !searchParams.has('session')) {
-        if (window.location.hash.includes('attend')) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-        return null;
-      }
-    }
-    return urlAttendance.sessionId;
+    const parsed = parseAttendanceFromUrl();
+    return parsed.sessionId;
   });
 
   // Listen to both hashchange and popstate events
@@ -168,8 +159,9 @@ export default function App() {
           storage.saveClasses(data.classes);
         }
         if (Array.isArray(data.students)) {
-          setStudents(data.students);
-          storage.saveStudents(data.students);
+          const enforced = enforceOfficialStudentTracks(data.students);
+          setStudents(enforced);
+          storage.saveStudents(enforced);
         }
         if (Array.isArray(data.teachers) && data.teachers.length > 0) {
           setTeachers(data.teachers);
@@ -286,8 +278,9 @@ export default function App() {
           storage.saveClasses(msg.classes);
         }
         if (Array.isArray(msg.students)) {
-          setStudents(msg.students);
-          storage.saveStudents(msg.students);
+          const enforced = enforceOfficialStudentTracks(msg.students);
+          setStudents(enforced);
+          storage.saveStudents(enforced);
         }
         if (Array.isArray(msg.sessions)) {
           setSessions(msg.sessions);
@@ -300,8 +293,9 @@ export default function App() {
           storage.saveClasses(msg.db.classes);
         }
         if (Array.isArray(msg.db.students)) {
-          setStudents(msg.db.students);
-          storage.saveStudents(msg.db.students);
+          const enforced = enforceOfficialStudentTracks(msg.db.students);
+          setStudents(enforced);
+          storage.saveStudents(enforced);
         }
         if (Array.isArray(msg.db.teachers) && msg.db.teachers.length > 0) {
           setTeachers(msg.db.teachers);
@@ -593,12 +587,14 @@ export default function App() {
   const handleManualSync = async () => {
     setSyncStatus('syncing');
     try {
+      const pin = storage.getTeacherPin();
       const result = await forceSyncBidirectional({
         teachers,
         currentTeacherId,
         classes,
         students,
         sessions,
+        adminPassword: pin,
       });
       if (result.success && result.data) {
         if (Array.isArray(result.data.classes)) {
@@ -606,8 +602,9 @@ export default function App() {
           storage.saveClasses(result.data.classes);
         }
         if (Array.isArray(result.data.students)) {
-          setStudents(result.data.students);
-          storage.saveStudents(result.data.students);
+          const enforced = enforceOfficialStudentTracks(result.data.students);
+          setStudents(enforced);
+          storage.saveStudents(enforced);
         }
         if (Array.isArray(result.data.sessions)) {
           setSessions(result.data.sessions);
@@ -629,13 +626,16 @@ export default function App() {
     }
   };
 
-  const handleExecuteMasterSync = async (options: {
-    syncClasses: boolean;
-    syncStudents: boolean;
-    syncSessions: boolean;
-    syncTeachers: boolean;
-  }) => {
-    const payload: any = { currentTeacherId };
+  const handleExecuteMasterSync = async (
+    options: {
+      syncClasses: boolean;
+      syncStudents: boolean;
+      syncSessions: boolean;
+      syncTeachers: boolean;
+    },
+    adminPassword?: string
+  ) => {
+    const payload: any = { currentTeacherId, adminPassword };
     if (options.syncClasses) payload.classes = classes;
     if (options.syncStudents) payload.students = students;
     if (options.syncSessions) payload.sessions = sessions;
@@ -648,8 +648,9 @@ export default function App() {
         storage.saveClasses(res.data.classes);
       }
       if (options.syncStudents && Array.isArray(res.data.students)) {
-        setStudents(res.data.students);
-        storage.saveStudents(res.data.students);
+        const enforced = enforceOfficialStudentTracks(res.data.students);
+        setStudents(enforced);
+        storage.saveStudents(enforced);
       }
       if (options.syncSessions && Array.isArray(res.data.sessions)) {
         setSessions(res.data.sessions);
@@ -663,11 +664,13 @@ export default function App() {
 
     return {
       success: !!res.success,
+      structuralUpdateAccepted: res.structuralUpdateAccepted,
+      warning: res.warning,
       syncedCounts: {
-        classes: options.syncClasses ? classes.length : 0,
-        students: options.syncStudents ? students.length : 0,
-        sessions: options.syncSessions ? sessions.length : 0,
-        teachers: options.syncTeachers ? teachers.length : 0,
+        classes: options.syncClasses ? (res.data?.classes?.length ?? classes.length) : 0,
+        students: options.syncStudents ? (res.data?.students?.length ?? students.length) : 0,
+        sessions: options.syncSessions ? (res.data?.sessions?.length ?? sessions.length) : 0,
+        teachers: options.syncTeachers ? (res.data?.teachers?.length ?? teachers.length) : 0,
       },
     };
   };

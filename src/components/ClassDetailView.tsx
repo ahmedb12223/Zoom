@@ -21,6 +21,7 @@ import {
 import { ClassSession, SchoolClass, Student, TeacherProfile } from '../types';
 import { QRCodeModal } from './QRCodeModal';
 import { generateWhatsAppAbsenteeReport } from '../utils/whatsappFormatter';
+import { buildStudentAttendanceLink } from '../utils/urlHelper';
 
 interface ClassDetailViewProps {
   currentClass: SchoolClass;
@@ -82,7 +83,7 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
   const totalCount = classStudents.length;
   const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
-  const gatewayUrl = `${window.location.origin}${window.location.pathname}#attend/${session.id}`;
+  const gatewayUrl = buildStudentAttendanceLink(session, currentTeacher);
 
   const handleCopyLink = async () => {
     try {

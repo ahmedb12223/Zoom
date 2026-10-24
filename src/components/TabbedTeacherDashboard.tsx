@@ -30,6 +30,7 @@ import { QRCodeModal } from './QRCodeModal';
 import { generateWhatsAppAbsenteeReport } from '../utils/whatsappFormatter';
 import { parseHierarchicalText } from '../utils/excelParser';
 import { getSubjectColorTheme } from './SimpleNavbar';
+import { buildStudentAttendanceLink } from '../utils/urlHelper';
 
 interface TabbedTeacherDashboardProps {
   currentTeacher: TeacherProfile;
@@ -125,7 +126,7 @@ export const TabbedTeacherDashboard: React.FC<TabbedTeacherDashboardProps> = ({
   const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
   const gatewayUrl = activeSession
-    ? `${window.location.origin}${window.location.pathname}#attend/${activeSession.id}`
+    ? buildStudentAttendanceLink(activeSession, currentTeacher)
     : '';
 
   const teacherTheme = getSubjectColorTheme(currentTeacher.subject);

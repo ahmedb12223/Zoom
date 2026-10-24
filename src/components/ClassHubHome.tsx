@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ClassSession, SchoolClass, Student, TeacherProfile } from '../types';
 import { QRCodeModal } from './QRCodeModal';
+import { buildStudentAttendanceLink } from '../utils/urlHelper';
 
 interface ClassHubHomeProps {
   currentTeacher: TeacherProfile;
@@ -59,10 +60,29 @@ export const ClassHubHome: React.FC<ClassHubHomeProps> = ({
   const [editingZoomClassId, setEditingZoomClassId] = useState<string | null>(null);
   const [tempZoomUrl, setTempZoomUrl] = useState('');
 
-  const handleCopyClassLink = async (classObj: SchoolClass) => {
-    // Look up or link session
+  const getAttendanceLinkForClass = (classObj: SchoolClass): string => {
     const classSession = sessions.find((s) => s.classId === classObj.id);
-    const link = `${window.location.origin}${window.location.pathname}#attend/${classSession?.id || `class_${classObj.id}`}`;
+    if (classSession) {
+      return buildStudentAttendanceLink(classSession, currentTeacher);
+    }
+    const virtualSession: ClassSession = {
+      id: `class_${classObj.id}`,
+      classId: classObj.id,
+      className: classObj.name,
+      sessionTitle: `حصة فصل ${classObj.name}`,
+      zoomUrl: classObj.zoomUrl || currentTeacher.defaultZoomLink || 'https://zoom.us',
+      teacherId: currentTeacher.id,
+      targetTrack: 'all',
+      createdAt: new Date().toISOString(),
+      scheduledTime: 'مباشر الآن',
+      isActive: true,
+      attendance: [],
+    };
+    return buildStudentAttendanceLink(virtualSession, currentTeacher);
+  };
+
+  const handleCopyClassLink = async (classObj: SchoolClass) => {
+    const link = getAttendanceLinkForClass(classObj);
     try {
       await navigator.clipboard.writeText(link);
       setCopiedClassId(classObj.id);
@@ -73,8 +93,7 @@ export const ClassHubHome: React.FC<ClassHubHomeProps> = ({
   };
 
   const handleOpenQr = (classObj: SchoolClass) => {
-    const classSession = sessions.find((s) => s.classId === classObj.id);
-    const link = `${window.location.origin}${window.location.pathname}#attend/${classSession?.id || `class_${classObj.id}`}`;
+    const link = getAttendanceLinkForClass(classObj);
     setQrModalData({
       url: link,
       title: `رمز حضور فصل ${classObj.name}`,

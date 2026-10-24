@@ -27,33 +27,98 @@ export function ensureAbsoluteUrl(url?: string | null): string {
   return `https://${trimmed}`;
 }
 
+export const STORAGE_KEY_PUBLISHED_DOMAIN = 'zoom_attendance_published_domain';
+
+/**
+ * Dynamic getter for the active site origin without trailing slash.
+ */
+export function getActiveSiteOrigin(): string {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return window.location.origin.replace(/\/+$/, '');
+  }
+  return '';
+}
+
+// Deprecated constant kept for backward compatibility: defaults to the real open website URL
+export const DEFAULT_PUBLISHED_DOMAIN = getActiveSiteOrigin();
+
+/**
+ * Ensures any domain or URL string is a valid absolute URL without trailing slashes.
+ */
+export function ensureAbsoluteDomain(domain?: string): string {
+  const currentOrigin = getActiveSiteOrigin();
+  let cleaned = (domain || '').trim().replace(/\/+$/, '');
+  
+  // Discard invalid dummy/dummy-like domain zoom123
+  if (!cleaned || cleaned.includes('zoom123')) {
+    return currentOrigin || 'https://zoom.us';
+  }
+
+  if (!/^https?:\/\//i.test(cleaned)) {
+    cleaned = `https://${cleaned}`;
+  }
+  return cleaned;
+}
+
+/**
+ * Gets the configured or active public domain for student attendance links.
+ * 1. Checks localStorage for an explicitly teacher-configured domain (ignoring any stale zoom123 value).
+ * 2. Defaults directly to the actual open website's URL (window.location.origin) so every link and QR code works instantly.
+ */
+export function getPublishedDomain(): string {
+  const currentOrigin = getActiveSiteOrigin();
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PUBLISHED_DOMAIN);
+      if (saved) {
+        const trimmed = saved.trim();
+        // Automatically purge any stale dummy domains like zoom123.ai.studio
+        if (trimmed.includes('zoom123') || !trimmed) {
+          localStorage.removeItem(STORAGE_KEY_PUBLISHED_DOMAIN);
+        } else {
+          return ensureAbsoluteDomain(trimmed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return currentOrigin || '';
+}
+
+/**
+ * Saves a new published domain to localStorage for all future student attendance links.
+ * If empty or contains zoom123, it resets back to the current active website origin.
+ */
+export function setPublishedDomain(domain: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const cleaned = (domain || '').trim();
+    if (!cleaned || cleaned.includes('zoom123')) {
+      localStorage.removeItem(STORAGE_KEY_PUBLISHED_DOMAIN);
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY_PUBLISHED_DOMAIN, ensureAbsoluteDomain(cleaned));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Builds a portable, self-contained student attendance URL.
+ * Always resolves to the reliable published platform domain (e.g. https://zoom123.ai.studio)
+ * without requiring any Google/Gmail login on iPhones, Androids, or external browsers.
  * Encodes all necessary session and teacher metadata into URL query parameters so that
  * when opened on any device, incognito tab, or mobile browser without local storage,
  * the student gateway will reconstruct the exact session and zoom link reliably.
  */
 export function buildStudentAttendanceLink(
   session: ClassSession,
-  teacher?: TeacherProfile
+  teacher?: TeacherProfile,
+  customDomain?: string
 ): string {
-  let baseOrigin = window.location.origin;
-  try {
-    const envBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || '';
-    if (envBase) {
-      baseOrigin = envBase.replace(/\/+$/, '');
-    } else if (typeof window !== 'undefined' && window.location) {
-      const hostname = window.location.hostname;
-      if (hostname.includes('github.io') || (!hostname.includes('localhost') && !hostname.includes('run.app') && !hostname.includes('aistudio'))) {
-        baseOrigin = 'https://ais-dev-2gzy6cuwtsdgl5nzfu44ep-256426744382.europe-west2.run.app';
-      }
-    }
-  } catch {
-    // fallback
-  }
-
-  const pathname = window.location.pathname;
-  const baseUrl = `${baseOrigin}${pathname}`;
+  const rawBase = customDomain ? ensureAbsoluteDomain(customDomain) : getPublishedDomain();
+  const baseDomain = (rawBase || getActiveSiteOrigin()).replace(/\/+$/, '');
 
   const cleanZoomUrl = ensureAbsoluteUrl(session.zoomUrl);
 
@@ -73,7 +138,7 @@ export function buildStudentAttendanceLink(
   }
 
   // Both search params (?attend=...) and hash fragment (#attend/...) for maximum compatibility
-  return `${baseUrl}?${params.toString()}#attend/${encodeURIComponent(session.id)}`;
+  return `${baseDomain}/?${params.toString()}#attend/${encodeURIComponent(session.id)}`;
 }
 
 export interface ParsedAttendanceInfo {

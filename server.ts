@@ -7,7 +7,8 @@ import {
   DEFAULT_TEACHERS,
   DEFAULT_CLASSES,
   DEFAULT_STUDENTS,
-  DEFAULT_SESSIONS
+  DEFAULT_SESSIONS,
+  enforceOfficialStudentTracks
 } from './src/utils/storage.ts';
 import { normalizeText, findBestMatch } from './src/utils/arabicFuzzy.ts';
 import { mergeDuplicateClasses } from './src/utils/excelParser.ts';
@@ -19,8 +20,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-// Enable CORS for all origins (supports custom domains and static deployments)
-app.use((req, res, next) => {
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Universal CORS & Safari/Mobile Header Support for all external browsers & devices
+app.use((req: Request, res: Response, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
@@ -30,9 +34,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
 
 // Database Persistence Directory & File
 const DATA_DIR = path.join(__dirname, '.data');
@@ -53,11 +54,12 @@ function loadDatabase(): AppDatabase {
       const content = fs.readFileSync(DB_FILE, 'utf-8');
       const parsed = JSON.parse(content);
       if (parsed && typeof parsed === 'object') {
+        const rawStudents = Array.isArray(parsed.students) ? parsed.students : DEFAULT_STUDENTS;
         return {
           teachers: Array.isArray(parsed.teachers) && parsed.teachers.length > 0 ? parsed.teachers : DEFAULT_TEACHERS,
           currentTeacherId: parsed.currentTeacherId || 'teacher_ahmed_badawi',
           classes: Array.isArray(parsed.classes) ? parsed.classes : DEFAULT_CLASSES,
-          students: Array.isArray(parsed.students) ? parsed.students : DEFAULT_STUDENTS,
+          students: enforceOfficialStudentTracks(rawStudents),
           sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
           teacherPin: typeof parsed.teacherPin === 'string' && parsed.teacherPin.trim() ? parsed.teacherPin : '123654',
         };
@@ -71,19 +73,22 @@ function loadDatabase(): AppDatabase {
     teachers: DEFAULT_TEACHERS,
     currentTeacherId: 'teacher_ahmed_badawi',
     classes: DEFAULT_CLASSES,
-    students: DEFAULT_STUDENTS,
+    students: enforceOfficialStudentTracks(DEFAULT_STUDENTS),
     sessions: [],
     teacherPin: '123654',
   };
 }
 
 let db = loadDatabase();
+// Immediate server-side reconciliation ensuring permanent track consistency
+db.students = enforceOfficialStudentTracks(db.students);
 
 function saveDatabase(): void {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
+    db.students = enforceOfficialStudentTracks(db.students);
     const tmpPath = `${DB_FILE}.tmp`;
     fs.writeFileSync(tmpPath, JSON.stringify(db, null, 2), 'utf-8');
     fs.renameSync(tmpPath, DB_FILE);
@@ -91,6 +96,10 @@ function saveDatabase(): void {
     console.error('Error saving db.json:', err);
   }
 }
+
+// Persist sanitized database with confirmed tracks immediately to disk
+saveDatabase();
+console.log(`[Startup] Cloud database synchronized with ${db.students.length} students (${db.students.filter(s => s.track === 'arabic').length} Arabic, ${db.students.filter(s => s.track === 'english').length} English).`);
 
 // Sanitize database on startup: Remove any old hardcoded demo sessions if they exist
 if (db.sessions && db.sessions.length > 0) {
@@ -173,9 +182,10 @@ setInterval(() => {
 // SSE Endpoint for instant live updates across all connected browsers
 app.get('/api/events', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
   res.write(`data: ${JSON.stringify({ type: 'CONNECTED', timestamp: Date.now() })}\n\n`);
@@ -196,16 +206,49 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // Get all shared app data (classes, students, sessions, teachers)
 app.get('/api/data', (_req: Request, res: Response) => {
   checkAndTriggerSaudiMidnightReset();
+  db.students = enforceOfficialStudentTracks(db.students);
   res.json(db);
 });
 
-// Sync full state from teacher dashboard safely with per-teacher scoping
+// Sync full state from teacher dashboard safely with per-teacher scoping and admin password protection
 app.post('/api/sync', (req: Request, res: Response) => {
   checkAndTriggerSaudiMidnightReset();
-  const { teachers, currentTeacherId, classes, students, sessions } = req.body;
+  const { teachers, currentTeacherId, classes, students, sessions, adminPassword } = req.body;
   const syncingTeacherId = currentTeacherId || req.body.teacherId;
 
-  if (Array.isArray(teachers) && teachers.length > 0) {
+  // Determine if this request is authorized by Ahmed Badawi with the valid teacher PIN
+  const targetTeacher = db.teachers.find((t) => t.id === syncingTeacherId);
+  const isAhmed =
+    syncingTeacherId === 'teacher_ahmed_badawi' ||
+    (targetTeacher &&
+      (targetTeacher.email === 'ahmedbadawi5090@gmail.com' ||
+        targetTeacher.name.includes('بدوي') ||
+        targetTeacher.name.includes('badawi')));
+
+  const currentPin = db.teacherPin || '123654';
+  const isValidAdminAuth = Boolean(isAhmed && adminPassword && String(adminPassword).trim() === currentPin);
+
+  const hasStructuralPayload = (Array.isArray(classes) && classes.length > 0) || (Array.isArray(students) && students.length > 0);
+  let structuralUpdateAccepted = false;
+
+  // Strictly protect classes and students: only Ahmed Badawi with valid password can alter them
+  if (hasStructuralPayload) {
+    if (isValidAdminAuth) {
+      if (Array.isArray(classes)) {
+        db.classes = classes;
+      }
+      if (Array.isArray(students)) {
+        db.students = enforceOfficialStudentTracks(students);
+      }
+      structuralUpdateAccepted = true;
+      console.log(`[Sync Security] Authorized structural update accepted from ${syncingTeacherId}.`);
+    } else {
+      console.warn(`[Sync Security] Ignored unauthorized structural update (classes/students) without valid admin password. Teacher: ${syncingTeacherId}`);
+    }
+  }
+
+  // Teachers list update (also requires admin auth)
+  if (Array.isArray(teachers) && teachers.length > 0 && isValidAdminAuth) {
     const teacherMap = new Map(db.teachers.map((t) => [t.id, t]));
     teachers.forEach((t) => teacherMap.set(t.id, t));
     db.teachers = Array.from(teacherMap.values());
@@ -215,22 +258,12 @@ app.post('/api/sync', (req: Request, res: Response) => {
     db.currentTeacherId = currentTeacherId;
   }
 
-  if (Array.isArray(classes)) {
-    // Authoritative sync for classes: preserves deletions made by the user
-    db.classes = classes;
-  }
-
-  if (Array.isArray(students)) {
-    // Authoritative sync for students: preserves deletions made by the user
-    db.students = students;
-  }
-
   // Automatic duplicate unification check on every sync
   if (Array.isArray(db.classes) && db.classes.length > 0) {
     const autoMerge = mergeDuplicateClasses(db.classes, db.students, db.sessions);
     if (autoMerge.mergedCount > 0) {
       db.classes = autoMerge.classes;
-      db.students = autoMerge.students;
+      db.students = enforceOfficialStudentTracks(autoMerge.students);
       db.sessions = autoMerge.sessions;
     }
   }
@@ -281,7 +314,16 @@ app.post('/api/sync', (req: Request, res: Response) => {
     db,
   });
 
-  res.json({ success: true, count: db.sessions.length, classesCount: db.classes.length });
+  res.json({
+    success: true,
+    count: db.sessions.length,
+    classesCount: db.classes.length,
+    studentsCount: db.students.length,
+    structuralUpdateAccepted,
+    warning: hasStructuralPayload && !structuralUpdateAccepted
+      ? 'لم يتم تعديل بيانات الفصول والطلاب على السيرفر لعدم تقديم كلمة مرور المعلم المشرف (أحمد بدوي)'
+      : undefined
+  });
 });
 
 // Get Teacher PIN
@@ -562,10 +604,35 @@ app.post('/api/sessions/:id/attendance', (req: Request, res: Response) => {
 
   let session = db.sessions.find((s) => s.id === sessionId);
 
-  // If session doesn't exist (e.g. deleted by teacher), refuse check-in to prevent session resurrection
+  // If session is not found in db but sessionInfo was passed via self-contained URL link, initialize it cleanly
   if (!session) {
-    res.status(404).json({ error: 'عذراً، هذه الحصة غير متاحة أو تم إغلاقها وحذفها بواسطة المعلم' });
-    return;
+    const { sessionInfo } = req.body;
+    if (sessionInfo && (sessionInfo.className || sessionInfo.sessionTitle)) {
+      session = {
+        id: sessionId,
+        teacherId: sessionInfo.teacherId || 'teacher_ahmed_badawi',
+        classId: sessionInfo.classId || 'class_auto',
+        className: sessionInfo.className || 'الفصل',
+        sessionTitle: sessionInfo.sessionTitle || 'حصة دراسية',
+        zoomUrl: sessionInfo.zoomUrl || 'https://zoom.us',
+        targetTrack: sessionInfo.targetTrack || 'all',
+        createdAt: new Date().toISOString(),
+        scheduledTime: 'مباشر الآن',
+        isActive: true,
+        attendance: [],
+      };
+      db.sessions.unshift(session);
+      saveDatabase();
+      broadcastSseEvent({
+        type: 'SESSION_CREATED_OR_UPDATED',
+        originTeacherId: session.teacherId,
+        session,
+        db,
+      });
+    } else {
+      res.status(404).json({ error: 'عذراً، هذه الحصة غير متاحة أو تم إغلاقها وحذفها بواسطة المعلم' });
+      return;
+    }
   }
 
   // Server-side fuzzy matching if client didn't supply matchedStudent

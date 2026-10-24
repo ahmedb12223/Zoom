@@ -22,6 +22,7 @@ import {
 import { ClassSession, SchoolClass, Student, TeacherProfile } from '../types';
 import { QRCodeModal } from './QRCodeModal';
 import { generateWhatsAppAbsenteeReport } from '../utils/whatsappFormatter';
+import { buildStudentAttendanceLink } from '../utils/urlHelper';
 
 interface OrganizedDashboardProps {
   currentTeacher: TeacherProfile;
@@ -89,7 +90,7 @@ export const OrganizedDashboard: React.FC<OrganizedDashboardProps> = ({
   const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
   const gatewayUrl = activeSession
-    ? `${window.location.origin}${window.location.pathname}#attend/${activeSession.id}`
+    ? buildStudentAttendanceLink(activeSession, currentTeacher)
     : '';
 
   // Copy Gateway Link

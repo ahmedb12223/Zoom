@@ -12,7 +12,11 @@ import {
   ShieldCheck,
   ChevronRight,
   Database,
-  ArrowLeftRight
+  ArrowLeftRight,
+  KeyRound,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { SchoolClass, Student, ClassSession, TeacherProfile } from '../types/index.ts';
 
@@ -24,13 +28,18 @@ interface MasterSyncModalProps {
   sessions: ClassSession[];
   teachers: TeacherProfile[];
   currentTeacherId: string;
-  onExecuteSync: (options: {
-    syncClasses: boolean;
-    syncStudents: boolean;
-    syncSessions: boolean;
-    syncTeachers: boolean;
-  }) => Promise<{
+  onExecuteSync: (
+    options: {
+      syncClasses: boolean;
+      syncStudents: boolean;
+      syncSessions: boolean;
+      syncTeachers: boolean;
+    },
+    adminPassword?: string
+  ) => Promise<{
     success: boolean;
+    structuralUpdateAccepted?: boolean;
+    warning?: string;
     syncedCounts: {
       classes: number;
       students: number;
@@ -55,11 +64,18 @@ export const MasterSyncModal: React.FC<MasterSyncModalProps> = ({
   const [syncSessions, setSyncSessions] = useState(true);
   const [syncTeachers, setSyncTeachers] = useState(true);
 
+  // Security Admin Password State
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
   const [isSyncing, setIsSyncing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [syncResult, setSyncResult] = useState<{
     success: boolean;
+    structuralUpdateAccepted?: boolean;
+    warning?: string;
     counts?: { classes: number; students: number; sessions: number; teachers: number };
     timestamp?: string;
   } | null>(null);
@@ -70,21 +86,29 @@ export const MasterSyncModal: React.FC<MasterSyncModalProps> = ({
   if (!isOpen) return null;
 
   const handleStartSync = async () => {
-    setIsSyncing(true);
-    setProgress(15);
-    setSyncResult(null);
-    setLogs(['[1/4] جاري تجهيز الاتصال بالسيرفر السحابي وفحص البيانات...']);
-
     const opts =
       syncMode === 'full'
         ? { syncClasses: true, syncStudents: true, syncSessions: true, syncTeachers: true }
         : { syncClasses, syncStudents, syncSessions, syncTeachers };
 
+    const touchesStructuralData = opts.syncClasses || opts.syncStudents || opts.syncTeachers;
+
+    if (touchesStructuralData && !adminPassword.trim()) {
+      setPasswordError('يرجى إدخال كلمة مرور المعلم المشرف (مستر أحمد بدوي) لتأكيد مزامنة بيانات الفصول والطلاب.');
+      return;
+    }
+
+    setPasswordError(null);
+    setIsSyncing(true);
+    setProgress(15);
+    setSyncResult(null);
+    setLogs(['[1/4] جاري التحقق من التوقيع الأمني والاتصال بالسيرفر السحابي...']);
+
     try {
       setTimeout(() => {
         setProgress(40);
         const studentLogDetails = opts.syncStudents
-          ? `[2/4] تفاصيل كشوف الطلاب: مزامنة ${students.length} طالب (${englishStudentsCount} بمسار اللغات "English" + ${arabicStudentsCount} بالمسار العربي "Arabic")...`
+          ? `[2/4] تفاصيل كشوف الطلاب: تأكيد ${students.length} طالب (${englishStudentsCount} بمسار اللغات + ${arabicStudentsCount} بالمسار العربي)...`
           : '[2/4] جاري تجهيز حزم البيانات المحددة...';
         setLogs((prev) => [...prev, studentLogDetails]);
       }, 300);
@@ -93,25 +117,39 @@ export const MasterSyncModal: React.FC<MasterSyncModalProps> = ({
         setProgress(75);
         setLogs((prev) => [
           ...prev,
-          `[3/4] رفع وتحديث السيرفر: ${opts.syncClasses ? `${classes.length} فصل، ` : ''}${opts.syncSessions ? `${sessions.length} حصة، ` : ''}تثبيت المسارات بدون أي تكرار...`
+          `[3/4] إرسال طلب المزامنة الموثق بكلمة المرور للسيرفر السحابي...`
         ]);
       }, 700);
 
-      const res = await onExecuteSync(opts);
+      const res = await onExecuteSync(opts, adminPassword.trim());
 
       setTimeout(() => {
         setProgress(100);
         setIsSyncing(false);
         if (res.success) {
-          setLogs((prev) => [
-            ...prev,
-            `[4/4] اكتملت المزامنة بنجاح 100%! تم إرسال وتثبيت ${students.length} طالب (${englishStudentsCount} لغات + ${arabicStudentsCount} عربي) إلى جميع الأجهزة.`
-          ]);
-          setSyncResult({
-            success: true,
-            counts: res.syncedCounts,
-            timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          });
+          if (touchesStructuralData && res.structuralUpdateAccepted === false) {
+            setLogs((prev) => [
+              ...prev,
+              '⚠️ تنبيه أمني: كلمة المرور المدخلة غير صحيحة! رفض السيرفر تعديل بيانات الفصول والطلاب لحمايتها من التغيير.'
+            ]);
+            setSyncResult({
+              success: false,
+              warning: 'كلمة المرور غير صحيحة. تم رفض تعديل الفصول والطلاب على السيرفر لحماية الأقسام.',
+              counts: res.syncedCounts,
+              timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            });
+          } else {
+            setLogs((prev) => [
+              ...prev,
+              `[4/4] اكتملت المزامنة بنجاح 100%! تم اعتماد وتثبيت بيانات السحابة: ${students.length} طالب (${englishStudentsCount} لغات + ${arabicStudentsCount} عربي).`
+            ]);
+            setSyncResult({
+              success: true,
+              structuralUpdateAccepted: res.structuralUpdateAccepted,
+              counts: res.syncedCounts,
+              timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            });
+          }
         } else {
           setLogs((prev) => [...prev, '❌ فشلت المزامنة. يرجى التأكد من الاتصال بالإنترنت ومحاولة المزامنة مجدداً.']);
           setSyncResult({ success: false });
@@ -311,6 +349,52 @@ export const MasterSyncModal: React.FC<MasterSyncModalProps> = ({
                 </div>
               </label>
             </div>
+          </div>
+
+          {/* Master Admin Security PIN Section */}
+          <div className="p-4 bg-amber-50/70 rounded-2xl border border-amber-200/90 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                <KeyRound className="w-4 h-4 text-amber-700" />
+                <span>كلمة مرور المزامنة والتحكم السحابي (Admin PIN)</span>
+                <span className="text-red-500 font-black">*</span>
+              </label>
+              <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-md">
+                حماية السحابة
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={adminPassword}
+                onChange={(e) => {
+                  setAdminPassword(e.target.value);
+                  if (passwordError) setPasswordError(null);
+                }}
+                disabled={isSyncing}
+                placeholder="أدخل كلمة مرور مستر أحمد بدوي (الافتراضية: 123654)"
+                className="w-full bg-white border border-amber-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 rounded-xl py-2.5 px-3.5 pl-10 text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all shadow-xs"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {passwordError && (
+              <p className="text-[11px] font-bold text-red-600 flex items-center gap-1.5 bg-red-50 p-2 rounded-lg border border-red-200">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{passwordError}</span>
+              </p>
+            )}
+
+            <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
+              🔒 لحماية تقسيم الطلاب (عربي ولغات) ومنع أي تعديل غير مصرح به على السيرفر، يتجاهل النظام أي طلب تعديل للفصول أو الطلاب ما لم يتم إدخال وتوثيق كلمة المرور الخاصة بك.
+            </p>
           </div>
 
           {/* Syncing Progress & Live Logs */}

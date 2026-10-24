@@ -4,6 +4,7 @@
  */
 
 import { ClassSession, AttendanceRecord, Student, SchoolClass, TeacherProfile } from '../types/index.ts';
+import { safeStorage } from './storage.ts';
 
 const SYNC_CHANNEL_NAME = 'zoom_attendance_sync_bus';
 
@@ -18,12 +19,6 @@ function getApiUrl(endpoint: string): string {
     const envBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || '';
     if (envBase) {
       return `${envBase.replace(/\/+$/, '')}${cleanEndpoint}`;
-    }
-    if (typeof window !== 'undefined' && window.location) {
-      const hostname = window.location.hostname;
-      if (hostname.includes('github.io') || (!hostname.includes('localhost') && !hostname.includes('run.app') && !hostname.includes('aistudio'))) {
-        return `https://ais-dev-2gzy6cuwtsdgl5nzfu44ep-256426744382.europe-west2.run.app${cleanEndpoint}`;
-      }
     }
   } catch {
     // fallback to relative path
@@ -123,7 +118,7 @@ export async function fetchServerSessions(): Promise<ClassSession[] | null> {
 }
 
 /**
- * Syncs full teacher state to the server with offline queue fallback
+ * Syncs full teacher state to the server with offline queue fallback and admin signature
  */
 export async function syncStateToServer(data: {
   teachers?: TeacherProfile[];
@@ -131,37 +126,45 @@ export async function syncStateToServer(data: {
   classes?: SchoolClass[];
   students?: Student[];
   sessions?: ClassSession[];
-}): Promise<boolean> {
+  adminPassword?: string;
+}): Promise<{ success: boolean; structuralUpdateAccepted?: boolean; warning?: string }> {
   const OFFLINE_QUEUE_KEY = 'zoom_attend_offline_queue_v1';
   try {
+    const adminPassword =
+      data.adminPassword ||
+      safeStorage.getItem('zoom_attend_teacher_pin_v3') ||
+      safeStorage.getItem('zoom_attend_teacher_pin_v2') ||
+      undefined;
+
     const res = await fetch(getApiUrl('/api/sync'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, adminPassword }),
     });
 
     if (res.ok) {
+      const json = await res.json().catch(() => ({}));
       // Clear offline queue upon successful sync so stale states are never replayed
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem(OFFLINE_QUEUE_KEY);
-      }
-      return true;
+      safeStorage.removeItem(OFFLINE_QUEUE_KEY);
+      return {
+        success: true,
+        structuralUpdateAccepted: json.structuralUpdateAccepted,
+        warning: json.warning
+      };
     }
-    return false;
+    return { success: false };
   } catch (err) {
     console.warn('State sync to server failed (storing in offline queue):', err);
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        const rawQueue = localStorage.getItem(OFFLINE_QUEUE_KEY);
-        const queue = rawQueue ? JSON.parse(rawQueue) : [];
-        queue.push(data);
-        if (queue.length > 10) queue.shift();
-        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-      } catch {
-        // storage quota exceeded or private mode
-      }
+    try {
+      const rawQueue = safeStorage.getItem(OFFLINE_QUEUE_KEY);
+      const queue = rawQueue ? JSON.parse(rawQueue) : [];
+      queue.push(data);
+      if (queue.length > 10) queue.shift();
+      safeStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    } catch {
+      // storage quota exceeded or private mode
     }
-    return false;
+    return { success: false };
   }
 }
 
@@ -441,9 +444,8 @@ export function isOnline(): boolean {
 }
 
 export function hasPendingOfflineChanges(): boolean {
-  if (typeof window === 'undefined' || !window.localStorage) return false;
   try {
-    const raw = localStorage.getItem('zoom_attend_offline_queue_v1');
+    const raw = safeStorage.getItem('zoom_attend_offline_queue_v1');
     if (!raw) return false;
     const q = JSON.parse(raw);
     return Array.isArray(q) && q.length > 0;
@@ -485,8 +487,11 @@ export async function forceSyncBidirectional(currentState: {
   classes?: SchoolClass[];
   students?: Student[];
   sessions?: ClassSession[];
+  adminPassword?: string;
 }): Promise<{
   success: boolean;
+  structuralUpdateAccepted?: boolean;
+  warning?: string;
   data?: {
     teachers: TeacherProfile[];
     currentTeacherId: string;
@@ -497,20 +502,31 @@ export async function forceSyncBidirectional(currentState: {
 }> {
   const OFFLINE_QUEUE_KEY = 'zoom_attend_offline_queue_v1';
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.getItem(OFFLINE_QUEUE_KEY);
-      localStorage.removeItem(OFFLINE_QUEUE_KEY);
-    }
-    // 1. Post latest state
-    await fetch(getApiUrl('/api/sync'), {
+    safeStorage.removeItem(OFFLINE_QUEUE_KEY);
+    // 1. Post latest state with admin signature if present
+    const adminPassword =
+      currentState.adminPassword ||
+      safeStorage.getItem('zoom_attend_teacher_pin_v3') ||
+      safeStorage.getItem('zoom_attend_teacher_pin_v2') ||
+      undefined;
+
+    const postRes = await fetch(getApiUrl('/api/sync'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(currentState),
+      body: JSON.stringify({ ...currentState, adminPassword }),
     });
+
+    const postJson = postRes.ok ? await postRes.json().catch(() => ({})) : {};
+
     // 2. Fetch authoritative snapshot
     const serverData = await fetchServerData();
     if (serverData) {
-      return { success: true, data: serverData };
+      return {
+        success: postRes.ok,
+        structuralUpdateAccepted: postJson.structuralUpdateAccepted,
+        warning: postJson.warning,
+        data: serverData,
+      };
     }
   } catch (err) {
     console.warn('Force bidirectional sync failed:', err);
